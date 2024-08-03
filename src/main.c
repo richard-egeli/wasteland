@@ -3,25 +3,31 @@
 #include <stdio.h>
 
 #include "collision/collision.h"
+#include "collision/spatial_grid.h"
 
 int main() {
     InitWindow(1280, 768, "SAT");
     SetTargetFPS(60);
 
-    BoxCollider c1 = box_collider_new(32, 32);
+    Camera2D camera = {
+        .offset   = {0},
+        .target   = {0},
+        .rotation = 0,
+        .zoom     = 1.0,
+    };
 
-    BoxCollider floor[128];
+    SPGrid* grid   = spgrid_new();
+    BoxCollider c1 = box_collider_new(32, 32);
+    BoxCollider floor[600];
     size_t count = sizeof(floor) / sizeof(*floor);
     for (int i = 0; i < count; i++) {
         floor[i]          = box_collider_new(32, 32);
         floor[i].position = (Point){32 * i, 300};
         box_collider_update(&floor[i]);
+        spgrid_insert(grid, &floor[i]);
     }
 
-    floor[10].position = (Point){200, 299};
-    floor[11].position = (Point){180, 298};
-
-    float gravity      = 0.1f;
+    float gravity = 0.1f;
 
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -49,20 +55,47 @@ int main() {
         c1.collision.bottom = false;
         c1.collision.right  = false;
         c1.collision.left   = false;
-        for (int i = 0; i < count; i++) {
-            Color color = WHITE;
-            if (box_collider_resolve(&c1, &floor[i])) {
-                gravity = 0.1f;
-                color   = RED;
-            }
 
+        double start        = GetTime();
+        BoxCollider* col;
+        SPGridIter* iter = spgrid_iter(grid, box_collider_bounds(&c1));
+        while ((col = spgrid_iter_next(&iter))) {
+            if (box_collider_resolve(&c1, col)) {
+                gravity = 0.1f;
+            }
+        }
+
+        double end = GetTime() - start;
+        printf("NEW WAY: %f\n", end);  // 0.000004
+
+        BeginMode2D(camera);
+
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                DrawRectangleLines(x * 128, y * 128, 128, 128, RED);
+            }
+        }
+
+        // double start = GetTime();
+        // for (int i = 0; i < count; i++) {
+        //     if (box_collider_resolve(&c1, &floor[i])) {
+        //         gravity = 0.1f;
+        //     }
+        // }
+        //
+        // double end = GetTime() - start;
+        // printf("OLD WAY: %f\n", end);  // 0.000160
+
+        for (int i = 0; i < count; i++) {
             Rect r2 = box_collider_rect(&floor[i]);
-            DrawRectangle(r2.x, r2.y, r2.w, r2.h, color);
+            DrawRectangle(r2.x, r2.y, r2.w, r2.h, WHITE);
         }
 
         box_collider_update(&c1);
         Rect r1 = box_collider_rect(&c1);
         DrawRectangle(r1.x, r1.y, r1.w, r1.h, GREEN);
+
+        EndMode2D();
 
         EndDrawing();
     }

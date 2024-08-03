@@ -53,10 +53,17 @@ endif()
 
 add_subdirectory(lib/collision)
 add_subdirectory(lib/hashmap)
+add_subdirectory(lib/array)
 
 add_executable(${PROJECT_NAME} src/main.c)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
-target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap)
+target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap array)
+
+
+if (${BUILD_UNIT_TESTS})
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)

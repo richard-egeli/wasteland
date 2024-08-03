@@ -5,7 +5,16 @@ static inline bool box_rect_overlap(Rect r1, Rect r2) {
              (r2.y > r1.y + r1.h) || (r1.y > r2.y + r2.h));
 }
 
-static inline Rect box_collider_bounds(const BoxCollider *col) {
+inline Rect box_collider_rect(const BoxCollider *col) {
+    return (Rect){
+        .x = col->position.x - col->origin.x,
+        .y = col->position.y - col->origin.y,
+        .w = col->size.x,
+        .h = col->size.y,
+    };
+}
+
+inline Rect box_collider_bounds(const BoxCollider *col) {
     return (Rect){
         .x = col->position.x + col->velocity.x - col->origin.x,
         .y = col->position.y + col->velocity.y - col->origin.y,
@@ -82,15 +91,6 @@ void box_collider_update(BoxCollider *collider) {
     collider->position.y += collider->velocity.y;
     collider->velocity.y /= 1.1f;
     collider->velocity.x = 0;
-}
-
-Rect box_collider_rect(const BoxCollider *col) {
-    return (Rect){
-        .x = col->position.x - col->origin.x,
-        .y = col->position.y - col->origin.y,
-        .w = col->size.x,
-        .h = col->size.y,
-    };
 }
 
 BoxCollider box_collider_new(float width, float height) {

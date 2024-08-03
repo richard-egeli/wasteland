@@ -3,17 +3,7 @@
 
 #include <stdbool.h>
 
-typedef struct Point {
-    float x;
-    float y;
-} Point;
-
-typedef struct Rect {
-    float x;
-    float y;
-    float w;
-    float h;
-} Rect;
+#include "collision/collision_defs.h"
 
 typedef struct BoxCollider {
     Point origin;
@@ -28,13 +18,15 @@ typedef struct BoxCollider {
     } collision;
 } BoxCollider;
 
+Rect box_collider_rect(const BoxCollider* col);
+
+Rect box_collider_bounds(const BoxCollider* col);
+
 bool box_collider_overlap(BoxCollider* b1, BoxCollider* b2);
 
 bool box_collider_resolve(BoxCollider* b1, BoxCollider* b2);
 
 void box_collider_update(BoxCollider* collider);
-
-Rect box_collider_rect(const BoxCollider* col);
 
 BoxCollider box_collider_new(float width, float height);
 
