@@ -10,7 +10,9 @@ typedef struct Array Array;
 
 size_t array_length(const Array* this);
 
-bool array_has(const Array* this, void* element);
+int array_find(const Array* this, const void* element);
+
+bool array_has(const Array* this, const void* element);
 
 void* array_get(const Array* this, size_t index);
 

@@ -13,4 +13,9 @@ typedef struct Rect {
     float h;
 } Rect;
 
+typedef enum ColliderType {
+    COLLIDER_TYPE_STATIC  = 0,
+    COLLIDER_TYPE_DYNAMIC = 1,
+} ColliderType;
+
 #endif  // LIB_COLLISION_COLLISION_DEFS_H_

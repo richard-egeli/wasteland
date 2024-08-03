@@ -1,9 +1,9 @@
-#include <math.h>
 #include <raylib.h>
 #include <stdio.h>
 
-#include "collision/collision.h"
-#include "collision/spatial_grid.h"
+#include "collision/box_collider.h"
+#include "collision/collision_defs.h"
+#include "collision/sparse_grid.h"
 
 int main() {
     InitWindow(1280, 768, "SAT");
@@ -18,7 +18,13 @@ int main() {
 
     SPGrid* grid   = spgrid_new();
     BoxCollider c1 = box_collider_new(32, 32);
-    BoxCollider floor[600];
+    BoxCollider c2 = box_collider_new(32, 32);
+    c1.type        = COLLIDER_TYPE_DYNAMIC;
+    c1.position    = (Point){0, 268};
+    c2.type        = COLLIDER_TYPE_DYNAMIC;
+    c2.position    = (Point){64, 268};
+
+    BoxCollider floor[64];
     size_t count = sizeof(floor) / sizeof(*floor);
     for (int i = 0; i < count; i++) {
         floor[i]          = box_collider_new(32, 32);
@@ -27,46 +33,40 @@ int main() {
         spgrid_insert(grid, &floor[i]);
     }
 
+    spgrid_remove(grid, &floor[10]);
+    spgrid_remove(grid, &floor[11]);
+
+    floor[10].position = (Point){300, 268};
+    floor[11].position = (Point){300, 236};
+
+    spgrid_insert(grid, &floor[10]);
+    spgrid_insert(grid, &floor[11]);
+    spgrid_insert(grid, &c1);
+    spgrid_insert(grid, &c2);
+
+    printf("%f %f\n", c1.velocity.x, c1.velocity.y);
+
     float gravity = 0.1f;
 
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
 
-        gravity = fminf(gravity + 9.8f * GetFrameTime() * 0.1, 5);
-
-        if (c1.velocity.y < 0) {
-            c1.velocity.y += gravity;
-            gravity = 0.1f;
-        } else {
-            c1.velocity.y += gravity;
-        }
-
-        if (IsKeyDown(KEY_S)) c1.velocity.y += 1;
         if (IsKeyDown(KEY_D)) c1.velocity.x += 3;
         if (IsKeyDown(KEY_A)) c1.velocity.x -= 3;
 
+        if (IsKeyDown(KEY_RIGHT)) c2.velocity.x += 3;
+        if (IsKeyDown(KEY_LEFT)) c2.velocity.x -= 3;
+
         if (c1.collision.bottom && IsKeyPressed(KEY_W)) {
             c1.velocity.y -= 10;
-            printf("Jumping!\n");
         }
 
-        c1.collision.top    = false;
-        c1.collision.bottom = false;
-        c1.collision.right  = false;
-        c1.collision.left   = false;
-
-        double start        = GetTime();
-        BoxCollider* col;
-        SPGridIter* iter = spgrid_iter(grid, box_collider_bounds(&c1));
-        while ((col = spgrid_iter_next(&iter))) {
-            if (box_collider_resolve(&c1, col)) {
-                gravity = 0.1f;
-            }
+        if (c2.collision.bottom && IsKeyPressed(KEY_UP)) {
+            c2.velocity.y -= 10;
         }
 
-        double end = GetTime() - start;
-        printf("NEW WAY: %f\n", end);  // 0.000004
+        spgrid_resolve(grid, GetFrameTime());
 
         BeginMode2D(camera);
 
@@ -76,24 +76,17 @@ int main() {
             }
         }
 
-        // double start = GetTime();
-        // for (int i = 0; i < count; i++) {
-        //     if (box_collider_resolve(&c1, &floor[i])) {
-        //         gravity = 0.1f;
-        //     }
-        // }
-        //
-        // double end = GetTime() - start;
-        // printf("OLD WAY: %f\n", end);  // 0.000160
-
         for (int i = 0; i < count; i++) {
             Rect r2 = box_collider_rect(&floor[i]);
             DrawRectangle(r2.x, r2.y, r2.w, r2.h, WHITE);
         }
 
         box_collider_update(&c1);
+        box_collider_update(&c2);
         Rect r1 = box_collider_rect(&c1);
         DrawRectangle(r1.x, r1.y, r1.w, r1.h, GREEN);
+        Rect r2 = box_collider_rect(&c2);
+        DrawRectangle(r2.x, r2.y, r2.w, r2.h, GREEN);
 
         EndMode2D();
 

@@ -1,4 +1,8 @@
-#include "collision/collision.h"
+#include "collision/box_collider.h"
+
+#include <math.h>
+
+#include "collision/collision_defs.h"
 
 static inline bool box_rect_overlap(Rect r1, Rect r2) {
     return !((r2.x > r1.x + r1.w) || (r1.x > r2.x + r2.w) ||
@@ -25,7 +29,7 @@ inline Rect box_collider_bounds(const BoxCollider *col) {
 
 bool box_collider_overlap(BoxCollider *b1, BoxCollider *b2) {
     const Rect r1 = box_collider_bounds(b1);
-    const Rect r2 = box_collider_bounds(b2);
+    const Rect r2 = box_collider_rect(b2);
     return box_rect_overlap(r1, r2);
 }
 
@@ -41,7 +45,23 @@ static bool box_collider_slope(BoxCollider *b1, BoxCollider *b2) {
     return false;
 }
 
-bool box_collider_resolve(BoxCollider *b1, BoxCollider *b2) {
+void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
+    BoxCollider *b1 = p1;
+    BoxCollider *b2 = p2;
+
+    // try to solve whichever has the highest velocity
+    if (b1->type == COLLIDER_TYPE_DYNAMIC &&
+        b1->type == COLLIDER_TYPE_DYNAMIC) {
+        Point v1 = b1->velocity;
+        Point v2 = b2->velocity;
+        float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
+        float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
+        if (m2 > m1) {
+            b1 = p2;
+            b2 = p1;
+        }
+    }
+
     if (box_collider_overlap(b1, b2)) {
         Point velocity = b1->velocity;
 
@@ -80,9 +100,6 @@ bool box_collider_resolve(BoxCollider *b1, BoxCollider *b2) {
         }
 
         b1->velocity = velocity;
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -95,9 +112,12 @@ void box_collider_update(BoxCollider *collider) {
 
 BoxCollider box_collider_new(float width, float height) {
     return (BoxCollider){
-        .size     = {width, height},
-        .origin   = {0},
-        .velocity = {0},
-        .position = {0},
+        .size      = {width, height},
+        .origin    = {0},
+        .velocity  = {0},
+        .position  = {0},
+        .type      = COLLIDER_TYPE_STATIC,
+        .collision = {0},
+        .gravity   = 0,
     };
 }

@@ -45,7 +45,17 @@ size_t array_length(const Array* this) {
     return this->length;
 }
 
-bool array_has(const Array* this, void* element) {
+int array_find(const Array* this, const void* element) {
+    for (int i = 0; i < array_length(this); i++) {
+        if (array_get(this, i) == element) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+bool array_has(const Array* this, const void* element) {
     for (int i = 0; i < array_length(this); i++) {
         void* value = array_get(this, i);
         if (value == element) {
