@@ -1,13 +1,71 @@
 #include <raylib.h>
+#include <rlgl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "array/array.h"
 #include "collision/box_collider.h"
 #include "collision/collision_defs.h"
 #include "collision/sparse_grid.h"
+#include "ldtk/ldtk.h"
+#include "ldtk/tilemap.h"
 
-int main() {
-    InitWindow(1280, 768, "SAT");
+static void on_collision(BoxCollider* box) {
+    printf("Colliding\n");
+}
+
+int main(void) {
+    InitWindow(1280, 768, "Temp Window");
     SetTargetFPS(60);
+
+    LDTK_Root* root = ldtk_load(
+        "assets/samples/Typical_2D_platformer_example.ldtk");
+
+    LDTK_Level* level = NULL;
+    LDTK_Layer* layer = NULL;
+
+    for (int i = 0; i < array_length(root->levels); i++) {
+        LDTK_Level* l = array_get(root->levels, i);
+
+        if (strcmp(l->identifier, "Your_typical_2D_platformer") == 0) {
+            level = l;
+            break;
+        }
+    }
+
+    for (int i = 0; i < array_length(level->layer_instances); i++) {
+        LDTK_Layer* l = array_get(level->layer_instances, i);
+
+        if (strcmp(l->__identifier, "Collisions") == 0) {
+            layer = l;
+            break;
+        }
+    }
+
+    Tilemap* tilemap        = tilemap_from_ldtk(level);
+    RenderTexture rt        = LoadRenderTexture(1280, 768);
+    SPGrid* grid            = spgrid_new();
+    BoxCollider* player     = box_collider_new(0, 0, 16, 16);
+
+    player->type            = COLLIDER_TYPE_DYNAMIC;
+    player->gravity.enabled = true;
+
+    spgrid_insert(grid, player);
+
+    for (int i = 0; i < layer->int_grid_csv_length; i++) {
+        if (layer->int_grid_csv[i] > 0) {
+            int x            = (i % layer->__c_width) * 16;
+            int y            = (i / layer->__c_width) * 16;
+
+            BoxCollider* col = box_collider_new(x, y, 16, 16);
+            spgrid_insert(grid, col);
+            DrawRectangle(x, y, 16, 16, RED);
+        }
+    }
+
+    // NOTE: fix for blending of alpha colors on render textures
+    rlSetBlendFactorsSeparate(0x0302, 0x0303, 1, 0x0303, 0x8006, 0x8006);
 
     Camera2D camera = {
         .offset   = {0},
@@ -16,82 +74,46 @@ int main() {
         .zoom     = 1.0,
     };
 
-    SPGrid* grid   = spgrid_new();
-    BoxCollider c1 = box_collider_new(32, 32);
-    BoxCollider c2 = box_collider_new(32, 32);
-    c1.type        = COLLIDER_TYPE_DYNAMIC;
-    c1.position    = (Point){0, 268};
-    c2.type        = COLLIDER_TYPE_DYNAMIC;
-    c2.position    = (Point){64, 268};
-
-    BoxCollider floor[64];
-    size_t count = sizeof(floor) / sizeof(*floor);
-    for (int i = 0; i < count; i++) {
-        floor[i]          = box_collider_new(32, 32);
-        floor[i].position = (Point){32 * i, 300};
-        box_collider_update(&floor[i]);
-        spgrid_insert(grid, &floor[i]);
-    }
-
-    spgrid_remove(grid, &floor[10]);
-    spgrid_remove(grid, &floor[11]);
-
-    floor[10].position = (Point){300, 268};
-    floor[11].position = (Point){300, 236};
-
-    spgrid_insert(grid, &floor[10]);
-    spgrid_insert(grid, &floor[11]);
-    spgrid_insert(grid, &c1);
-    spgrid_insert(grid, &c2);
-
-    printf("%f %f\n", c1.velocity.x, c1.velocity.y);
-
-    float gravity = 0.1f;
-
     while (!WindowShouldClose()) {
-        BeginDrawing();
-        ClearBackground(BLACK);
+        if (IsKeyDown(KEY_UP)) camera.target.y -= 3.0;
+        if (IsKeyDown(KEY_DOWN)) camera.target.y += 3.0;
+        if (IsKeyDown(KEY_LEFT)) camera.target.x -= 3.0;
+        if (IsKeyDown(KEY_RIGHT)) camera.target.x += 3.0;
+        if (IsKeyDown(KEY_D)) player->velocity.x += 2.0f;
+        if (IsKeyDown(KEY_A)) player->velocity.x -= 2.0f;
 
-        if (IsKeyDown(KEY_D)) c1.velocity.x += 3;
-        if (IsKeyDown(KEY_A)) c1.velocity.x -= 3;
-
-        if (IsKeyDown(KEY_RIGHT)) c2.velocity.x += 3;
-        if (IsKeyDown(KEY_LEFT)) c2.velocity.x -= 3;
-
-        if (c1.collision.bottom && IsKeyPressed(KEY_W)) {
-            c1.velocity.y -= 10;
-        }
-
-        if (c2.collision.bottom && IsKeyPressed(KEY_UP)) {
-            c2.velocity.y -= 10;
-        }
+        if (IsKeyPressed(KEY_W)) player->velocity.y -= 10;
 
         spgrid_resolve(grid, GetFrameTime());
 
+        BeginTextureMode(rt);
+        ClearBackground(WHITE);
+
+        BeginBlendMode(BLEND_CUSTOM_SEPARATE);
+
+        Tile* tile;
+        TileIter it = tilemap_tile_iter(tilemap);
+        while ((tile = tilemap_tile_next(&it))) {
+            tilemap_tile_draw(tilemap, tile);
+        }
+
+        DrawRectangle(player->position.x, player->position.y, 16, 16, RED);
+        EndBlendMode();
+
+        EndTextureMode();
+        BeginDrawing();
+        ClearBackground(WHITE);
+
         BeginMode2D(camera);
-
-        for (int y = 0; y < 10; y++) {
-            for (int x = 0; x < 10; x++) {
-                DrawRectangleLines(x * 128, y * 128, 128, 128, RED);
-            }
-        }
-
-        for (int i = 0; i < count; i++) {
-            Rect r2 = box_collider_rect(&floor[i]);
-            DrawRectangle(r2.x, r2.y, r2.w, r2.h, WHITE);
-        }
-
-        box_collider_update(&c1);
-        box_collider_update(&c2);
-        Rect r1 = box_collider_rect(&c1);
-        DrawRectangle(r1.x, r1.y, r1.w, r1.h, GREEN);
-        Rect r2 = box_collider_rect(&c2);
-        DrawRectangle(r2.x, r2.y, r2.w, r2.h, GREEN);
+        float scale   = 2;
+        Rectangle src = {0, 0, rt.texture.width, -rt.texture.height};
+        Rectangle dst = {0, 0, 1280 * scale, 768 * scale};
+        DrawTexturePro(rt.texture, src, dst, (Vector2){0}, 0, WHITE);
 
         EndMode2D();
 
         EndDrawing();
     }
 
-    return 0;
+    CloseWindow();
 }

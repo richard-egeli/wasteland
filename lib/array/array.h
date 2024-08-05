@@ -10,7 +10,11 @@ typedef struct Array Array;
 
 size_t array_length(const Array* this);
 
+void* array_last(const Array* this);
+
 int array_find(const Array* this, const void* element);
+
+void array_reverse(Array* this);
 
 bool array_has(const Array* this, const void* element);
 

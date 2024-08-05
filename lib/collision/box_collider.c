@@ -1,6 +1,8 @@
 #include "collision/box_collider.h"
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "collision/collision_defs.h"
 
@@ -49,21 +51,37 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
     BoxCollider *b1 = p1;
     BoxCollider *b2 = p2;
 
-    // try to solve whichever has the highest velocity
-    if (b1->type == COLLIDER_TYPE_DYNAMIC &&
-        b1->type == COLLIDER_TYPE_DYNAMIC) {
-        Point v1 = b1->velocity;
-        Point v2 = b2->velocity;
-        float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
-        float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
-        if (m2 > m1) {
-            b1 = p2;
-            b2 = p1;
-        }
-    }
+    // make sure that they collide on the same layers
+    if (!(b1->mask & b2->mask)) return;
+
+    // we don't check if triggers overlap, only if non-triggers overlap triggers
+    if (b1->trigger) return;
 
     if (box_collider_overlap(b1, b2)) {
         Point velocity = b1->velocity;
+
+        if (b2->trigger) {
+            if (b2->on_collision) {
+                b2->on_collision(b1);
+            }
+
+            return;
+        }
+
+        // try to solve whichever has the highest velocity
+        // this is a temp fix for colliding with dynamic objects, and it barely
+        // works
+        if (b1->type == COLLIDER_TYPE_DYNAMIC &&
+            b1->type == COLLIDER_TYPE_DYNAMIC) {
+            Point v1 = b1->velocity;
+            Point v2 = b2->velocity;
+            float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
+            float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
+            if (m2 > m1) {
+                b1 = p2;
+                b2 = p1;
+            }
+        }
 
         b1->velocity.y = 0;
         b1->velocity.x = velocity.x;
@@ -110,14 +128,23 @@ void box_collider_update(BoxCollider *collider) {
     collider->velocity.x = 0;
 }
 
-BoxCollider box_collider_new(float width, float height) {
-    return (BoxCollider){
-        .size      = {width, height},
-        .origin    = {0},
-        .velocity  = {0},
-        .position  = {0},
-        .type      = COLLIDER_TYPE_STATIC,
-        .collision = {0},
-        .gravity   = 0,
-    };
+BoxCollider *box_collider_new(float x, float y, float width, float height) {
+    BoxCollider *col      = malloc(sizeof(*col));
+    col->id               = 0;
+    col->mask             = 0xFFFFFFFF;
+    col->size             = (Point){width, height};
+    col->position         = (Point){x, y};
+    col->origin           = (Point){0};
+    col->velocity         = (Point){0};
+    col->type             = COLLIDER_TYPE_STATIC;
+    col->collision.top    = false;
+    col->collision.bottom = false;
+    col->collision.right  = false;
+    col->collision.left   = false;
+    col->trigger          = false;
+    col->on_collision     = NULL;
+    col->gravity.accum    = 0.0f;
+    col->gravity.enabled  = false;
+    col->gravity.force    = 0.98f;
+    return col;
 }

@@ -55,6 +55,18 @@ int array_find(const Array* this, const void* element) {
     return -1;
 }
 
+void array_reverse(Array* this) {
+    size_t length = array_length(this);
+    for (int i = 0; i < length / 2; i++) {
+        size_t first = i;
+        size_t last  = (length - 1) - i;
+        void* p1     = array_get(this, first);
+        void* p2     = array_get(this, last);
+        array_set(this, first, p2);
+        array_set(this, last, p1);
+    }
+}
+
 bool array_has(const Array* this, const void* element) {
     for (int i = 0; i < array_length(this); i++) {
         void* value = array_get(this, i);

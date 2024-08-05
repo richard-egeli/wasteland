@@ -131,13 +131,17 @@ void spgrid_resolve(SPGrid* this, float delta) {
         box->collision.bottom = false;
         box->collision.right  = false;
         box->collision.left   = false;
-        box->gravity          = fminf(box->gravity + 9.8f * 0.2 * delta, 6);
 
-        if (box->velocity.y < 0) {
-            box->velocity.y += box->gravity;
-            box->gravity = 0.1f;
-        } else {
-            box->velocity.y += box->gravity;
+        if (box->gravity.enabled) {
+            box->gravity.accum += box->gravity.force * delta;
+            box->gravity.accum = fminf(box->gravity.accum, 0.98f);
+
+            if (box->velocity.y < 0) {
+                box->velocity.y += box->gravity.accum;
+                box->gravity.accum = 0.1f;
+            } else {
+                box->velocity.y += box->gravity.accum;
+            }
         }
 
         if (!spgrid_region_equal(col->region, spgrid_region(rect))) {
@@ -158,8 +162,10 @@ void spgrid_resolve(SPGrid* this, float delta) {
         }
 
         if (b1->collision.bottom) {
-            b1->gravity = 0.1f;
+            b1->gravity.accum = 0.1f;
         }
+
+        box_collider_update(b1);
     }
 }
 
