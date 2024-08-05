@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <yyjson.h>
 
 #include "array/array.h"
@@ -147,6 +148,7 @@ static void ldtk_parse_levels(LDTK_Root* this, yyjson_val* root) {
     size_t idx, max;
     yyjson_val* json;
     yyjson_val* levels = yyjson_obj_get(root, "levels");
+
     yyjson_arr_foreach(levels, idx, max, json) {
         LDTK_Level* level = malloc(sizeof(*level));
         if (level == NULL) {
@@ -254,6 +256,55 @@ static size_t ldtk_load_file_content(const char* path, char** content) {
     return length;
 }
 
+LDTK_IntGridValue* ldtk_intgrid_next(LDTK_IntGridIter* iter) {
+    while (iter->index < iter->layer->int_grid_csv_length) {
+        iter->value.v = iter->layer->int_grid_csv[iter->index];
+        if (iter->value.v > 0) {
+            const size_t size  = iter->layer->__grid_size;
+            const size_t width = iter->layer->__c_width;
+            iter->value.s      = size;
+            iter->value.x      = (iter->index % width) * size;
+            iter->value.y      = (iter->index / width) * size;
+            iter->index++;
+            return &iter->value;
+        }
+
+        iter->index++;
+    }
+
+    return NULL;
+}
+
+LDTK_IntGridIter ldtk_intgrid_iter(const LDTK_Level* level, const char* layer) {
+    return (LDTK_IntGridIter){
+        .layer = ldtk_layer_get(level, layer),
+        .value = {0},
+        .index = 0,
+    };
+}
+
+LDTK_Layer* ldtk_layer_get(const LDTK_Level* level, const char* key) {
+    for (int i = 0; i < array_length(level->layer_instances); i++) {
+        LDTK_Layer* layer = array_get(level->layer_instances, i);
+        if (strcmp(layer->__identifier, key) == 0) {
+            return layer;
+        }
+    }
+
+    return NULL;
+}
+
+LDTK_Level* ldtk_level_get(const LDTK_Root* root, const char* key) {
+    for (int i = 0; i < array_length(root->levels); i++) {
+        LDTK_Level* level = array_get(root->levels, i);
+        if (strcmp(level->identifier, key) == 0) {
+            return level;
+        }
+    }
+
+    return NULL;
+}
+
 LDTK_Root* ldtk_load(const char* path) {
     char* content = NULL;
     size_t length = ldtk_load_file_content(path, &content);
@@ -279,8 +330,7 @@ LDTK_Root* ldtk_load(const char* path) {
         return NULL;
     }
 
-    root->levels = array_new();
-
+    // root->levels = array_new();
     ldtk_parse_root(root, json);
 
     return root;
