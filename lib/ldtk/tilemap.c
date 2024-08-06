@@ -1,10 +1,14 @@
 #include "ldtk/tilemap.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "array/array.h"
+#include "hashmap/hashmap.h"
 #include "ldtk/ldtk.h"
+#include "ldtk/ldtk_entity.h"
 
 void tilemap_begin(Tilemap* this, const Layer* layer) {
     this->active_layer = layer;
@@ -28,7 +32,7 @@ void tilemap_tile_draw(const Tilemap* this, const Tile* tile) {
 
     Rectangle src = {tile->src_x, tile->src_y, sw, sh};
     Rectangle dst = {tile->pos_x, tile->pos_y, b, b};
-    DrawTexturePro(layer->tileset, src, dst, (Vector2){0}, 0, col);
+    DrawTexturePro(*layer->texture, src, dst, (Vector2){0}, 0, col);
 }
 
 Tile* tilemap_tile_next(TileIter* it) {
@@ -56,38 +60,64 @@ TileIter tilemap_tile_iter(Tilemap* this) {
     };
 }
 
+void tilemap_load_textures(Tilemap* tilemap, const LDTK_Level* level) {
+    for (int j = 0; j < array_length(level->layer_instances); j++) {
+        const LDTK_Layer* layer = array_get(level->layer_instances, j);
+
+        if (layer->__tileset_rel_path != NULL) {
+            char uid[32];
+            snprintf(uid, sizeof(uid), "%d", layer->__tileset_def_uid);
+
+            if (!hmap_has(tilemap->tilesets, uid)) {
+                Texture* texture = malloc(sizeof(Texture));
+                if (texture == NULL) {
+                    fprintf(stderr, "failed to malloc texture\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                char prefixed_filepath[256];
+                const char* prefix = LDTK_ASSET_PREFIX;
+                const char* path   = layer->__tileset_rel_path;
+                snprintf(prefixed_filepath, 256, "%s/%s", prefix, path);
+                *texture = LoadTexture(prefixed_filepath);
+                hmap_put(tilemap->tilesets, uid, texture);
+            }
+        }
+    }
+}
+
 Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
     Tilemap* tilemap     = malloc(sizeof(*tilemap));
 
     tilemap->grid_width  = level->px_width;
     tilemap->grid_height = level->px_height;
     tilemap->layers      = array_new();
-    tilemap->tilesets    = array_new();
+    tilemap->entities    = array_new();
+    tilemap->tilesets    = hmap_new();
+
+    tilemap_load_textures(tilemap, level);
 
     for (int j = 0; j < array_length(level->layer_instances); j++) {
-        LDTK_Layer* layer = array_get(level->layer_instances, j);
-        Layer* new_layer  = malloc(sizeof(*layer));
-
-        char buffer[256];
-        const char* prefix = LDTK_ASSET_PREFIX;
-        const char* path   = layer->__tileset_rel_path;
-        snprintf(buffer, 256, "%s/%s", prefix, path);
+        LDTK_Layer* layer       = array_get(level->layer_instances, j);
+        Layer* new_layer        = malloc(sizeof(*layer));
 
         new_layer->tiles        = NULL;
         new_layer->tiles_length = 0;
         new_layer->grid_size    = layer->__grid_size;
-        new_layer->tileset      = LoadTexture(buffer);
         new_layer->opacity      = layer->__opacity;
 
-        size_t auto_size        = array_length(layer->auto_layer_tiles);
-        size_t grid_size        = array_length(layer->grid_tiles);
+        if (layer->__tileset_rel_path != NULL) {
+            char uid[32];
+            snprintf(uid, sizeof(uid), "%d", layer->__tileset_def_uid);
+            hmap_get(tilemap->tilesets, uid, (void**)&new_layer->texture);
+        }
 
-        if (auto_size > 0) {
-            new_layer->tiles_length = auto_size;
-            new_layer->tiles        = malloc(sizeof(Tile) * auto_size);
+        if (layer->auto_layer_tiles_length > 0) {
+            new_layer->tiles_length = layer->auto_layer_tiles_length;
+            new_layer->tiles = malloc(sizeof(Tile) * new_layer->tiles_length);
 
-            for (int i = 0; i < auto_size; i++) {
-                LDTK_Tile* tile     = array_get(layer->auto_layer_tiles, i);
+            for (int i = 0; i < new_layer->tiles_length; i++) {
+                LDTK_Tile* tile     = &layer->auto_layer_tiles[i];
                 new_layer->tiles[i] = (Tile){
                     .id      = tile->t,
                     .pos_x   = tile->px[0],
@@ -101,12 +131,12 @@ Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
             }
         }
 
-        if (grid_size > 0) {
-            new_layer->tiles_length = grid_size;
-            new_layer->tiles        = malloc(sizeof(Tile) * grid_size);
+        if (layer->grid_tiles_length > 0) {
+            new_layer->tiles_length = layer->grid_tiles_length;
+            new_layer->tiles = malloc(sizeof(Tile) * new_layer->tiles_length);
 
-            for (int i = 0; i < grid_size; i++) {
-                LDTK_Tile* tile     = array_get(layer->grid_tiles, i);
+            for (int i = 0; i < new_layer->tiles_length; i++) {
+                LDTK_Tile* tile     = &layer->grid_tiles[i];
                 new_layer->tiles[i] = (Tile){
                     .id      = tile->t,
                     .pos_x   = tile->px[0],
@@ -117,6 +147,31 @@ Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
                     .flip_y  = tile->f & (1 << 1),
                     .opacity = tile->a,
                 };
+            }
+        }
+
+        size_t entities_length = array_length(layer->entity_instances);
+        if (entities_length > 0) {
+            for (int i = 0; i < entities_length; i++) {
+                Entity* entity        = malloc(sizeof(*entity));
+                LDTK_Entity* ldtk_ent = array_get(layer->entity_instances, i);
+
+                entity->position.x    = ldtk_ent->__world_x;
+                entity->position.y    = ldtk_ent->__world_y;
+                entity->source.x      = ldtk_ent->__tile.x;
+                entity->source.y      = ldtk_ent->__tile.y;
+                entity->source.width  = ldtk_ent->__tile.w;
+                entity->source.height = ldtk_ent->__tile.h;
+
+                char uid[32];
+                snprintf(uid, sizeof(uid), "%d", ldtk_ent->__tile.tileset_uid);
+                if (!hmap_get(tilemap->tilesets,
+                              uid,
+                              (void**)&entity->texture)) {
+                    fprintf(stderr, "failed to get uid %s\n", uid);
+                    entity->texture = NULL;
+                }
+                array_push(tilemap->entities, entity);
             }
         }
 

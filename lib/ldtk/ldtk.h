@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #ifndef LDTK_ASSET_PREFIX
-#define LDTK_ASSET_PREFIX "assets/samples"
+#define LDTK_ASSET_PREFIX "assets"
 #endif
 
 typedef struct Array Array;
@@ -14,34 +14,6 @@ typedef struct LDTK_Point {
     float x;
     float y;
 } LDTK_Point;
-
-typedef struct LDTK_GridPoint {
-    int cx;
-    int cy;
-} LDTK_GridPoint;
-
-typedef struct LDTK_EntityLocation {
-    const char* entity_iid;
-    const char* layer_iid;
-    const char* level_iid;
-    const char* world_iid;
-} LDTK_EntityLocation;
-
-typedef struct LDTK_FieldInstance {
-    const char* __identifier;
-    void* __tile;
-    const char* __type;
-
-    union {
-        int int32;
-        float float32;
-        const char* string;
-        bool boolean;
-        LDTK_GridPoint grid_point;
-        void* entity_reference_info;
-        void* tileset_rect;
-    } value;
-} LDTK_FieldInstance;
 
 typedef struct LDTK_Definition {
 } LDTK_Definition;
@@ -59,25 +31,7 @@ typedef struct LDTK_TileInstance {
     int t;       // tile id in the corresponding tileset
 } LDTK_Tile;
 
-typedef struct LDTK_EntityInstance {
-    int __grid[2];
-    const char* __identifier;
-    float __pivot[2];
-    const char* __smart_color;
-    const char** __tags;
-    void* tileset_rect;
-    int __world_x;
-    int __world_y;
-    int def_uid;
-    LDTK_FieldInstance* field_instances;
-    size_t field_instances_length;
-    int height;
-    const char* iid;
-    int px[2];
-    int width;
-} LDTK_EntityInstance;
-
-typedef struct LDTK_LayerInstance {
+typedef struct LDTK_Layer {
     int __c_height;
     int __c_width;
     int __grid_size;
@@ -88,9 +42,12 @@ typedef struct LDTK_LayerInstance {
     int __tileset_def_uid;
     const char* __tileset_rel_path;
     const char* __type;
-    Array* auto_layer_tiles;
+    LDTK_Tile* auto_layer_tiles;
+    size_t auto_layer_tiles_length;
     Array* entity_instances;
-    Array* grid_tiles;
+    size_t entity_instances_length;
+    LDTK_Tile* grid_tiles;
+    size_t grid_tiles_length;
     const char* iid;
     int* int_grid_csv;
     size_t int_grid_csv_length;
@@ -158,7 +115,8 @@ typedef struct LDTK_Root {
     bool external_levels;
     const char* iid;
     const char* json_version;
-    Array* levels;  /// LDTK_Level Array
+    LDTK_Level** levels;
+    size_t levels_length;
     LDTK_Toc** toc;
     int world_grid_height;
     int world_grid_width;

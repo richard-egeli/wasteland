@@ -1,5 +1,5 @@
 
-add_library(ldtk ldtk.c tilemap.c)
+add_library(ldtk ldtk.c ldtk_entity.c tilemap.c)
 
 find_package(yyjson QUIET)
 if(NOT yyjson_FOUND)

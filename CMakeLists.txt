@@ -57,7 +57,7 @@ add_subdirectory(lib/hashmap)
 add_subdirectory(lib/array)
 add_subdirectory(lib/ldtk)
 
-add_executable(${PROJECT_NAME} src/main.c)
+add_executable(${PROJECT_NAME} src/main.c src/level_test.c)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap array ldtk)
 

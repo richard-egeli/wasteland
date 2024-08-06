@@ -7,79 +7,41 @@
 #include <yyjson.h>
 
 #include "array/array.h"
-
-#define STRING(json, key)                      \
-    ({                                         \
-        void* obj = yyjson_obj_get(json, key); \
-        obj ? yyjson_get_str(obj) : NULL;      \
-    })
-
-#define BOOL(json, key)                        \
-    ({                                         \
-        void* obj = yyjson_obj_get(json, key); \
-        obj ? yyjson_get_bool(obj) : false;    \
-    })
-
-#define INT(json, key)                         \
-    ({                                         \
-        void* obj = yyjson_obj_get(json, key); \
-        obj ? yyjson_get_int(obj) : 0;         \
-    })
-
-#define FLOAT(json, key)                       \
-    ({                                         \
-        void* obj = yyjson_obj_get(json, key); \
-        obj ? yyjson_get_num(obj) : 0;         \
-    })
+#include "ldtk/ldtk_defs.h"
+#include "ldtk/ldtk_entity.h"
 
 static void ldtk_parse_tile_instance(LDTK_Layer* layer, yyjson_val* root) {
-    size_t idx, max;
-    yyjson_val* json;
-    yyjson_val* grid_tiles       = yyjson_obj_get(root, "gridTiles");
-    yyjson_val* auto_layer_tiles = yyjson_obj_get(root, "autoLayerTiles");
-    size_t s1                    = yyjson_arr_size(auto_layer_tiles);
-    size_t s2                    = yyjson_arr_size(grid_tiles);
+    yyjson_val* grid_tiles         = yyjson_obj_get(root, "gridTiles");
+    yyjson_val* auto_layer_tiles   = yyjson_obj_get(root, "autoLayerTiles");
+    layer->auto_layer_tiles_length = yyjson_arr_size(auto_layer_tiles);
+    layer->grid_tiles_length       = yyjson_arr_size(grid_tiles);
 
-    Array* array;
-    yyjson_val* tiles;
-    if (s1 > s2) {
-        array = layer->auto_layer_tiles;
-        tiles = auto_layer_tiles;
+    LDTK_Tile* tiles;
+    yyjson_val* json_tiles;
+    if (layer->auto_layer_tiles_length > layer->grid_tiles_length) {
+        size_t size = layer->auto_layer_tiles_length * sizeof(LDTK_Tile);
+        layer->auto_layer_tiles = malloc(size);
+        json_tiles              = auto_layer_tiles;
+        tiles                   = layer->auto_layer_tiles;
     } else {
-        array = layer->grid_tiles;
-        tiles = grid_tiles;
+        size_t size       = layer->grid_tiles_length * sizeof(LDTK_Tile);
+        layer->grid_tiles = malloc(size);
+        json_tiles        = grid_tiles;
+        tiles             = layer->grid_tiles;
     }
 
-    yyjson_arr_foreach(tiles, idx, max, json) {
-        LDTK_Tile* tile = malloc(sizeof(*tile));
-        if (tile == NULL) {
-            perror("failed to malloc tile");
-            return;
-        }
+    size_t idx, max;
+    yyjson_val* json;
+    yyjson_arr_foreach(json_tiles, idx, max, json) {
+        LDTK_Tile tile;
 
-        tile->a        = FLOAT(json, "a");
-        tile->t        = FLOAT(json, "t");
-        tile->f        = INT(json, "f");
+        tile.a = FLOAT(json, "a");
+        tile.t = FLOAT(json, "t");
+        tile.f = INT(json, "f");
+        VEC2(tile.px, json, "px");
+        VEC2(tile.src, json, "src");
 
-        yyjson_val* px = yyjson_obj_get(json, "px");
-        if (px != NULL) {
-            size_t idx, max;
-            yyjson_val* value;
-            yyjson_arr_foreach(px, idx, max, value) {
-                tile->px[idx] = yyjson_get_int(value);
-            }
-        }
-
-        yyjson_val* src = yyjson_obj_get(json, "src");
-        if (src != NULL) {
-            size_t idx, max;
-            yyjson_val* value;
-            yyjson_arr_foreach(src, idx, max, value) {
-                tile->src[idx] = yyjson_get_int(value);
-            }
-        }
-
-        array_push(array, tile);
+        tiles[idx] = tile;
     }
 }
 
@@ -111,9 +73,7 @@ static void ldtk_parse_layer_instances(LDTK_Level* level, yyjson_val* root) {
             li->px_offset_x          = INT(json, "pxOffsetX");
             li->px_offset_y          = INT(json, "pxOffsetY");
             li->visible              = BOOL(json, "visible");
-            li->auto_layer_tiles     = array_new();
             li->entity_instances     = array_new();
-            li->grid_tiles           = array_new();
             li->int_grid_csv         = NULL;
             li->int_grid_csv_length  = 0;
 
@@ -139,6 +99,7 @@ static void ldtk_parse_layer_instances(LDTK_Level* level, yyjson_val* root) {
             }
 
             ldtk_parse_tile_instance(li, json);
+            ldtk_entity_parse(li, json);
             array_push(level->layer_instances, li);
         }
     }
@@ -147,7 +108,9 @@ static void ldtk_parse_layer_instances(LDTK_Level* level, yyjson_val* root) {
 static void ldtk_parse_levels(LDTK_Root* this, yyjson_val* root) {
     size_t idx, max;
     yyjson_val* json;
-    yyjson_val* levels = yyjson_obj_get(root, "levels");
+    yyjson_val* levels  = yyjson_obj_get(root, "levels");
+    this->levels_length = yyjson_arr_size(levels);
+    this->levels        = malloc(this->levels_length * sizeof(void*));
 
     yyjson_arr_foreach(levels, idx, max, json) {
         LDTK_Level* level = malloc(sizeof(*level));
@@ -175,26 +138,9 @@ static void ldtk_parse_levels(LDTK_Root* this, yyjson_val* root) {
         if (bg_pos != NULL) {
             LDTK_LevelBackgroundPosition* bg = malloc(sizeof(*bg));
             if (bg != NULL) {
-                yyjson_val* num;
-                size_t idx, max;
-                yyjson_val* json = yyjson_obj_get(bg_pos, "cropRect");
-                yyjson_arr_foreach(json, idx, max, num) {
-                    assert(yyjson_is_num(num));
-                    bg->crop_rect[idx] = yyjson_get_num(num);
-                }
-
-                json = yyjson_obj_get(bg_pos, "scale");
-                yyjson_arr_foreach(json, idx, max, num) {
-                    assert(yyjson_is_num(num));
-                    bg->scale[idx] = yyjson_get_num(num);
-                }
-
-                json = yyjson_obj_get(bg_pos, "topLeftPx");
-                yyjson_arr_foreach(json, idx, max, num) {
-                    assert(yyjson_is_int(num));
-                    bg->top_left_px[idx] = yyjson_get_int(num);
-                }
-
+                VEC2(bg->crop_rect, json, "cropRect");
+                VEC2(bg->scale, json, "scale");
+                VEC2(bg->top_left_px, json, "topLeftPx");
                 level->__bg_pos = bg;
             }
         }
@@ -216,7 +162,7 @@ static void ldtk_parse_levels(LDTK_Root* this, yyjson_val* root) {
         yyjson_val* layer_instances = yyjson_obj_get(json, "layerInstances");
         ldtk_parse_layer_instances(level, layer_instances);
 
-        array_push(this->levels, level);
+        this->levels[idx] = level;
     }
 }
 
@@ -295,8 +241,8 @@ LDTK_Layer* ldtk_layer_get(const LDTK_Level* level, const char* key) {
 }
 
 LDTK_Level* ldtk_level_get(const LDTK_Root* root, const char* key) {
-    for (int i = 0; i < array_length(root->levels); i++) {
-        LDTK_Level* level = array_get(root->levels, i);
+    for (int i = 0; i < root->levels_length; i++) {
+        LDTK_Level* level = root->levels[i];
         if (strcmp(level->identifier, key) == 0) {
             return level;
         }
@@ -330,8 +276,6 @@ LDTK_Root* ldtk_load(const char* path) {
         return NULL;
     }
 
-    // root->levels = array_new();
     ldtk_parse_root(root, json);
-
     return root;
 }

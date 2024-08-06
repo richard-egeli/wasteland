@@ -78,12 +78,12 @@ bool array_has(const Array* this, const void* element) {
 }
 
 void* array_get(const Array* this, size_t index) {
-    assert(index < this->length);
+    assert(index < this->capacity);
     return this->elements[index];
 }
 
 void array_set(Array* this, size_t index, void* element) {
-    assert(index < this->length);
+    assert(index < this->capacity);
     this->elements[index] = element;
 }
 

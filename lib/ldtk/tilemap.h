@@ -7,9 +7,12 @@
 
 typedef struct Array Array;
 
+typedef struct HashMap HashMap;
+
 typedef struct LDTK_Level LDTK_Level;
 
 typedef struct Tileset {
+    int uid;
     Texture texture;
 } Tileset;
 
@@ -28,14 +31,21 @@ typedef struct Layer {
     Tile* tiles;
     size_t tiles_length;
     size_t grid_size;
-    Texture tileset;
+    Texture* texture;
     float opacity;
 } Layer;
+
+typedef struct Entity {
+    Vector2 position;
+    Rectangle source;
+    Texture* texture;
+} Entity;
 
 typedef struct Tilemap {
     size_t grid_width;
     size_t grid_height;
-    Array* tilesets;
+    HashMap* tilesets;
+    Array* entities;
     Array* layers;
     const Layer* active_layer;
 } Tilemap;

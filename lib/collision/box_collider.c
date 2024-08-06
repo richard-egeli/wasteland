@@ -36,12 +36,14 @@ bool box_collider_overlap(BoxCollider *b1, BoxCollider *b2) {
 }
 
 static bool box_collider_slope(BoxCollider *b1, BoxCollider *b2) {
-    const int max = 2;
-    float pos     = b1->position.y + b1->size.y;
-    float off     = pos - b2->position.y;
-    if (off <= max) {
-        b1->position.y -= off;
-        return true;
+    if (b1->gravity.enabled) {
+        const int max = 2;
+        float pos     = b1->position.y + b1->size.y;
+        float off     = pos - b2->position.y;
+        if (off <= max) {
+            b1->position.y -= off;
+            return true;
+        }
     }
 
     return false;
@@ -124,8 +126,12 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
 void box_collider_update(BoxCollider *collider) {
     collider->position.x += collider->velocity.x;
     collider->position.y += collider->velocity.y;
-    collider->velocity.y /= 1.1f;
     collider->velocity.x = 0;
+    if (collider->gravity.enabled) {
+        collider->velocity.y /= 1.1f;
+    } else {
+        collider->velocity.y = 0;
+    }
 }
 
 BoxCollider *box_collider_new(float x, float y, float width, float height) {
