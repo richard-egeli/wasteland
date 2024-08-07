@@ -60,8 +60,8 @@ TileIter tilemap_tile_iter(Tilemap* this) {
 }
 
 void tilemap_load_textures(Tilemap* tilemap, const LDTK_Level* level) {
-    for (int j = 0; j < array_length(level->layer_instances); j++) {
-        const LDTK_Layer* layer = array_get(level->layer_instances, j);
+    for (int j = 0; j < level->layer_instances_length; j++) {
+        const LDTK_Layer* layer = &level->layer_instances[j];
 
         if (layer->__tileset_rel_path != NULL) {
             char uid[32];
@@ -96,8 +96,8 @@ Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
 
     tilemap_load_textures(tilemap, level);
 
-    for (int j = 0; j < array_length(level->layer_instances); j++) {
-        LDTK_Layer* layer       = array_get(level->layer_instances, j);
+    for (int j = 0; j < level->layer_instances_length; j++) {
+        LDTK_Layer* layer       = &level->layer_instances[j];
         Layer* new_layer        = malloc(sizeof(*layer));
 
         new_layer->tiles        = NULL;

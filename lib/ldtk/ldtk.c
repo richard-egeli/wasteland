@@ -6,8 +6,6 @@
 #include <string.h>
 #include <yyjson.h>
 
-#include "array/array.h"
-
 #define STRING(json, key)                                              \
     ({                                                                 \
         void* obj = yyjson_obj_get(json, key);                         \
@@ -32,7 +30,7 @@
         obj ? yyjson_get_num(obj) : 0;         \
     })
 
-#define VEC2(array, json, key)                   \
+#define NUM_ARRAY(array, json, key)              \
     {                                            \
         void* obj = yyjson_obj_get(json, key);   \
         size_t idx, max;                         \
@@ -42,21 +40,168 @@
         }                                        \
     }
 
-#define STRING_ARRAY(array, json, key)                       \
-    {                                                        \
-        void* obj = yyjson_obj_get(json, key);               \
-        if (array == NULL) {                                 \
-            perror("failed to alloc string array");          \
-        }                                                    \
-        size_t idx, max;                                     \
-        yyjson_val* value;                                   \
-        yyjson_arr_foreach(obj, idx, max, value) {           \
-            array_push(array, (void*)yyjson_get_str(value)); \
-        }                                                    \
-    }
-
 #define FREE(el) \
     if (el != NULL) free(el)
+
+static void ldtk_field_parse(LDTK_Entity* this, yyjson_val* root) {
+    yyjson_val* fields = yyjson_obj_get(root, "fieldInstances");
+
+    size_t size        = yyjson_arr_size(fields);
+    if (size == 0) return;
+
+    this->field_instances = malloc(sizeof(LDTK_Field) * size);
+    if (this->field_instances == NULL) {
+        perror("failed to allocate field_instances");
+        return;
+    }
+
+    this->field_instances_length = size;
+
+    size_t idx, max;
+    yyjson_val* json;
+    yyjson_arr_foreach(fields, idx, max, json) {
+        yyjson_val* type_obj = yyjson_obj_get(json, "__type");
+        yyjson_val* values   = yyjson_obj_get(json, "__value");
+        const char* type     = yyjson_get_str(type_obj);
+        LDTK_Field field     = {0};
+        field.__identifier   = STRING(json, "__identifier");
+        field.__type         = strdup(type);
+
+        if (strcmp(type, "Array<Point>") == 0) {
+            size_t size                    = yyjson_arr_size(values);
+            field.value.point_array.length = size;
+            if (size > 0) {
+                field.value.point_array.ptr = malloc(sizeof(LDTK_Point) * size);
+                if (field.value.point_array.ptr == NULL) {
+                    perror("failed to allocate point array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    LDTK_Point p = {
+                        .x = FLOAT(value, "cx"),
+                        .y = FLOAT(value, "cy"),
+                    };
+
+                    field.value.point_array.ptr[p_idx] = p;
+                }
+            }
+        } else if (strcmp(type, "Array<Int>") == 0) {
+            size_t size                    = yyjson_arr_size(values);
+            field.value.int32_array.length = size;
+            if (size > 0) {
+                field.value.int32_array.ptr = malloc(sizeof(int) * size);
+                if (field.value.int32_array.ptr == NULL) {
+                    perror("failed to allocate int array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    field.value.int32_array.ptr[p_idx] = yyjson_get_int(value);
+                }
+            }
+        } else if (strcmp(type, "Array<Float>") == 0) {
+            size_t size                      = yyjson_arr_size(values);
+            field.value.float32_array.length = size;
+            if (size > 0) {
+                field.value.float32_array.ptr = malloc(sizeof(float) * size);
+                if (field.value.float32_array.ptr == NULL) {
+                    perror("failed to allocate int array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    field.value.float32_array.ptr[p_idx] = yyjson_get_num(
+                        value);
+                }
+            }
+        } else if (strcmp(type, "Array<Bool>") == 0) {
+            size_t size                      = yyjson_arr_size(values);
+            field.value.boolean_array.length = size;
+            if (size > 0) {
+                field.value.boolean_array.ptr = malloc(sizeof(bool) * size);
+                if (field.value.boolean_array.ptr == NULL) {
+                    perror("failed to allocate int array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    field.value.boolean_array.ptr[p_idx] = yyjson_get_bool(
+                        value);
+                }
+            }
+        } else if (strcmp(type, "Array<String>") == 0) {
+            size_t size                     = yyjson_arr_size(values);
+            field.value.string_array.length = size;
+            if (size > 0) {
+                field.value.string_array.ptr = malloc(sizeof(char*) * size);
+                if (field.value.string_array.ptr == NULL) {
+                    perror("failed to allocate int array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    char* ptr = NULL;
+                    if (yyjson_is_str(value)) {
+                        ptr = strdup(yyjson_get_str(value));
+                    }
+
+                    field.value.string_array.ptr[p_idx] = ptr;
+                }
+            }
+        } else if (strcmp(type, "Array<Color>") == 0) {
+            size_t size                    = yyjson_arr_size(values);
+            field.value.color_array.length = size;
+            if (size > 0) {
+                field.value.color_array.ptr = malloc(sizeof(char*) * size);
+                if (field.value.color_array.ptr == NULL) {
+                    perror("failed to allocate int array");
+                    return;
+                }
+
+                size_t p_idx, p_max;
+                yyjson_val* value;
+                yyjson_arr_foreach(values, p_idx, p_max, value) {
+                    char* ptr = NULL;
+                    if (yyjson_is_str(value)) {
+                        ptr = strdup(yyjson_get_str(value));
+                    }
+
+                    field.value.color_array.ptr[p_idx] = ptr;
+                }
+            }
+        } else if (strcmp(type, "Point") == 0) {
+            field.value.point.x = INT(values, "cx");
+            field.value.point.y = INT(values, "cy");
+        } else if (strcmp(type, "Int") == 0) {
+            field.value.int32 = yyjson_get_int(values);
+        } else if (strcmp(type, "Float") == 0) {
+            field.value.float32 = yyjson_get_num(values);
+        } else if (strcmp(type, "Bool") == 0) {
+            field.value.boolean = yyjson_get_bool(values);
+        } else if (strcmp(type, "String") == 0) {
+            if (yyjson_is_str(values)) {
+                field.value.string = strdup(yyjson_get_str(values));
+            }
+        } else if (strcmp(type, "Color") == 0) {
+            if (yyjson_is_str(values)) {
+                field.value.color = strdup(yyjson_get_str(values));
+            }
+        }
+
+        this->field_instances[idx] = field;
+    }
+}
 
 static void ldtk_entity_parse(LDTK_Layer* this, yyjson_val* root) {
     yyjson_val* instances         = yyjson_obj_get(root, "entityInstances");
@@ -90,9 +235,9 @@ static void ldtk_entity_parse(LDTK_Layer* this, yyjson_val* root) {
         it.__world_x     = INT(json, "__worldX");
         it.__world_y     = INT(json, "__worldY");
 
-        VEC2(it.__grid, json, "__grid");
-        VEC2(it.__pivot, json, "__pivot");
-        VEC2(it.px, json, "px");
+        NUM_ARRAY(it.__grid, json, "__grid");
+        NUM_ARRAY(it.__pivot, json, "__pivot");
+        NUM_ARRAY(it.px, json, "px");
 
         yyjson_val* tags = yyjson_obj_get(json, "__tags");
         if (tags && yyjson_is_arr(tags)) {
@@ -122,6 +267,7 @@ static void ldtk_entity_parse(LDTK_Layer* this, yyjson_val* root) {
             it.__tile.h           = INT(tile, "h");
         }
 
+        ldtk_field_parse(&it, json);
         this->entity_instances[idx] = it;
     }
 }
@@ -154,8 +300,8 @@ static void ldtk_parse_tile(LDTK_Layer* layer, yyjson_val* root) {
         tile.a = FLOAT(json, "a");
         tile.t = FLOAT(json, "t");
         tile.f = INT(json, "f");
-        VEC2(tile.px, json, "px");
-        VEC2(tile.src, json, "src");
+        NUM_ARRAY(tile.px, json, "px");
+        NUM_ARRAY(tile.src, json, "src");
 
         tiles[idx] = tile;
     }
@@ -248,9 +394,9 @@ static void ldtk_parse_levels(LDTK_Root* this, yyjson_val* root) {
         if (bg_pos != NULL) {
             LDTK_LevelBackgroundPosition* bg = malloc(sizeof(*bg));
             if (bg != NULL) {
-                VEC2(bg->crop_rect, json, "cropRect");
-                VEC2(bg->scale, json, "scale");
-                VEC2(bg->top_left_px, json, "topLeftPx");
+                NUM_ARRAY(bg->crop_rect, json, "cropRect");
+                NUM_ARRAY(bg->scale, json, "scale");
+                NUM_ARRAY(bg->top_left_px, json, "topLeftPx");
                 level->__bg_pos = bg;
             }
         }
@@ -401,6 +547,36 @@ LDTK_Level* ldtk_level_get(const LDTK_Root* root, const char* key) {
     return NULL;
 }
 
+void ldtk_field_free(LDTK_Field* field) {
+    if (strcmp(field->__type, "Array<Int>") == 0) {
+        FREE(field->value.int32_array.ptr);
+    } else if (strcmp(field->__type, "Array<Float>") == 0) {
+        FREE(field->value.float32_array.ptr);
+    } else if (strcmp(field->__type, "Array<Boolean>") == 0) {
+        FREE(field->value.boolean_array.ptr);
+    } else if (strcmp(field->__type, "Array<Point>") == 0) {
+        FREE(field->value.point_array.ptr);
+    } else if (strcmp(field->__type, "Array<String>") == 0) {
+        for (int i = 0; i < field->value.string_array.length; i++) {
+            FREE(field->value.string_array.ptr[i]);
+        }
+        FREE(field->value.string_array.ptr);
+    } else if (strcmp(field->__type, "Array<Color>") == 0) {
+        for (int i = 0; i < field->value.string_array.length; i++) {
+            FREE(field->value.color_array.ptr[i]);
+        }
+
+        FREE(field->value.color_array.ptr);
+    } else if (strcmp(field->__type, "String") == 0) {
+        FREE(field->value.string);
+    } else if (strcmp(field->__type, "Color") == 0) {
+        FREE(field->value.color);
+    }
+
+    FREE(field->__identifier);
+    FREE(field->__type);
+}
+
 void ldtk_entity_free(LDTK_Entity* entity) {
     FREE(entity->__identifier);
     FREE(entity->__smart_color);
@@ -408,6 +584,10 @@ void ldtk_entity_free(LDTK_Entity* entity) {
 
     for (int i = 0; i < entity->__tags_length; i++) {
         FREE(entity->__tags[i]);
+    }
+
+    for (int i = 0; i < entity->field_instances_length; i++) {
+        ldtk_field_free(&entity->field_instances[i]);
     }
 
     FREE(entity->field_instances);

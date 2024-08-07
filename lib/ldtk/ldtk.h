@@ -8,8 +8,6 @@
 #define LDTK_ASSET_PREFIX "assets"
 #endif
 
-typedef struct Array Array;
-
 typedef struct LDTK_Point {
     float x;
     float y;
@@ -31,24 +29,43 @@ typedef struct LDTK_Tile {
     int t;       // tile id in the corresponding tileset
 } LDTK_Tile;
 
-typedef struct LDTK_GridPoint {
-    int cx;
-    int cy;
-} LDTK_GridPoint;
-
 typedef struct LDTK_Field {
-    const char* __identifier;
-    void* __tile;
-    const char* __type;
+    char* __identifier;
+    char* __type;
 
     union {
         int int32;
         float float32;
-        const char* string;
+        char* string;
+        char* color;
         bool boolean;
-        LDTK_GridPoint grid_point;
+        LDTK_Point point;
         void* entity_reference_info;
         void* tileset_rect;
+        struct {
+            int* ptr;
+            size_t length;
+        } int32_array;
+        struct {
+            float* ptr;
+            size_t length;
+        } float32_array;
+        struct {
+            bool* ptr;
+            size_t length;
+        } boolean_array;
+        struct {
+            LDTK_Point* ptr;
+            size_t length;
+        } point_array;
+        struct {
+            char** ptr;
+            size_t length;
+        } string_array;
+        struct {
+            char** ptr;
+            size_t length;
+        } color_array;
     } value;
 } LDTK_Field;
 
