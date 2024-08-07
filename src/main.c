@@ -1,20 +1,52 @@
 #include <assert.h>
+#include <complex.h>
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
 #include <raylib.h>
 #include <rlgl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "collision/box_collider.h"
 #include "collision/collision_defs.h"
 #include "collision/sparse_grid.h"
+#include "ldtk/ldtk.h"
 #include "level_test.h"
 
 static void on_collision(BoxCollider* box) {
     printf("Colliding\n");
 }
 
+static lua_State* lua_init(void) {
+    lua_State* l = luaL_newstate();
+    if (l == NULL) {
+        fprintf(stderr, "Cannot create Lua state\n");
+        exit(EXIT_FAILURE);
+    }
+
+    luaL_openlibs(l);
+
+    if (luaL_loadfile(l, "test.lua")) {
+        fprintf(stderr, "Error: %s\n", lua_tostring(l, -1));
+        lua_close(l);
+        exit(EXIT_FAILURE);
+    }
+
+    lua_pcall(l, 0, 0, 0);
+    lua_close(l);
+    return l;
+}
+
 int main(void) {
     InitWindow(1280, 768, "Temp Window");
     SetTargetFPS(60);
+
+    LDTK_Root* root = ldtk_load("assets/test.ldtk");
+
+    ldtk_free(root);
+    CloseWindow();
+    return 0;
 
     Level_Test level    = level_test_load();
     BoxCollider* player = box_collider_new(112, 190, 15, 15);

@@ -25,6 +25,12 @@ typedef struct HashMap {
     size_t length;
 } HashMap;
 
+typedef struct HashMapIter {
+    const HashMap* map;
+    KeyValue* next;
+    size_t index;
+} HashMapIter;
+
 static const size_t hmap_prime_table[] = {
     31,
     67,
@@ -172,6 +178,34 @@ static inline void try_hmap_shrink(HashMap* this) {
 static inline void hmap_key_free(KeyValue* kv) {
     free(kv->key);
     free(kv);
+}
+
+void* hmap_iter_next(HashMapIter* iter, const char** key) {
+    while (iter->index < iter->map->capacity) {
+        iter->next = iter->map->list[iter->index];
+        if (iter->next == NULL) {
+            iter->index++;
+            continue;
+        }
+
+        iter->index++;
+        void* value = iter->next->value;
+        if (key != NULL) *key = iter->next->key;
+
+        return value;
+    }
+
+    free(iter);
+    return NULL;
+}
+
+HashMapIter* hmap_iter(const HashMap* this) {
+    HashMapIter* iter = malloc(sizeof(*iter));
+    iter->next        = NULL;
+    iter->map         = this;
+    iter->index       = 0;
+
+    return iter;
 }
 
 size_t hmap_capacity(const HashMap* this) {

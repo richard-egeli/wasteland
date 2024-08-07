@@ -10,9 +10,9 @@ set(CMAKE_BUILD_TYPE Debug)
 
 # Add the ASan flags
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
-    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+    # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -g")
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+    # set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
@@ -52,14 +52,28 @@ if (NOT flecs_FOUND)
   FetchContent_MakeAvailable(flecs)
 endif()
 
+find_package(Lua QUIET)
+if (NOT Lua_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+    Lua
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    URL https://lua.org/ftp/lua-5.4.7.tar.gz
+  )
+
+  FetchContent_MakeAvailable(lua)
+endif()
+
 add_subdirectory(lib/collision)
 add_subdirectory(lib/hashmap)
 add_subdirectory(lib/array)
 add_subdirectory(lib/ldtk)
 
+message(STATUS ${LUA_INCLUDE_DIR})
+
 add_executable(${PROJECT_NAME} src/main.c src/level_test.c)
-target_include_directories(${PROJECT_NAME} PUBLIC include)
-target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap array ldtk)
+target_include_directories(${PROJECT_NAME} PUBLIC include ${LUA_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap array ldtk ${LUA_LIBRARY})
 
 
 if (${BUILD_UNIT_TESTS})

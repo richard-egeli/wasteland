@@ -6,6 +6,12 @@
 
 typedef struct HashMap HashMap;
 
+typedef struct HashMapIter HashMapIter;
+
+void* hmap_iter_next(HashMapIter* iter, const char** key);
+
+HashMapIter* hmap_iter(const HashMap* this);
+
 size_t hmap_capacity(const HashMap* this);
 
 bool hmap_has(const HashMap* this, const char* key);

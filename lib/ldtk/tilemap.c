@@ -8,7 +8,6 @@
 #include "array/array.h"
 #include "hashmap/hashmap.h"
 #include "ldtk/ldtk.h"
-#include "ldtk/ldtk_entity.h"
 
 void tilemap_begin(Tilemap* this, const Layer* layer) {
     this->active_layer = layer;
@@ -150,29 +149,25 @@ Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
             }
         }
 
-        size_t entities_length = array_length(layer->entity_instances);
-        if (entities_length > 0) {
-            for (int i = 0; i < entities_length; i++) {
-                Entity* entity        = malloc(sizeof(*entity));
-                LDTK_Entity* ldtk_ent = array_get(layer->entity_instances, i);
+        for (int i = 0; i < layer->entity_instances_length; i++) {
+            Entity* entity        = malloc(sizeof(*entity));
+            LDTK_Entity* ldtk_ent = &layer->entity_instances[i];
 
-                entity->position.x    = ldtk_ent->__world_x;
-                entity->position.y    = ldtk_ent->__world_y;
-                entity->source.x      = ldtk_ent->__tile.x;
-                entity->source.y      = ldtk_ent->__tile.y;
-                entity->source.width  = ldtk_ent->__tile.w;
-                entity->source.height = ldtk_ent->__tile.h;
+            entity->position.x    = ldtk_ent->__world_x;
+            entity->position.y    = ldtk_ent->__world_y;
+            entity->source.x      = ldtk_ent->__tile.x;
+            entity->source.y      = ldtk_ent->__tile.y;
+            entity->source.width  = ldtk_ent->__tile.w;
+            entity->source.height = ldtk_ent->__tile.h;
 
-                char uid[32];
-                snprintf(uid, sizeof(uid), "%d", ldtk_ent->__tile.tileset_uid);
-                if (!hmap_get(tilemap->tilesets,
-                              uid,
-                              (void**)&entity->texture)) {
-                    fprintf(stderr, "failed to get uid %s\n", uid);
-                    entity->texture = NULL;
-                }
-                array_push(tilemap->entities, entity);
+            char uid[32];
+            snprintf(uid, sizeof(uid), "%d", ldtk_ent->__tile.tileset_uid);
+            if (!hmap_get(tilemap->tilesets, uid, (void**)&entity->texture)) {
+                fprintf(stderr, "failed to get uid %s\n", uid);
+                entity->texture = NULL;
             }
+
+            array_push(tilemap->entities, entity);
         }
 
         array_push(tilemap->layers, new_layer);

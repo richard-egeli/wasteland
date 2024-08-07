@@ -42,10 +42,12 @@ void level_test_update(const Level_Test* level) {
 
         if (ent != NULL && ent->texture != NULL) {
             Rectangle src = ent->source;
-            Rectangle dst = {ent->position.x,
-                             ent->position.y,
-                             ent->source.width,
-                             ent->source.height};
+            Rectangle dst = {
+                ent->position.x,
+                ent->position.y,
+                ent->source.width,
+                ent->source.height,
+            };
 
             DrawTexturePro(*ent->texture, src, dst, (Vector2){0}, 0, WHITE);
         }
