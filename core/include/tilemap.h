@@ -1,5 +1,5 @@
-#ifndef LIB_TILEMAP_TILEMAP_H_
-#define LIB_TILEMAP_TILEMAP_H_
+#ifndef CORE_INCLUDE_TILEMAP_H_
+#define CORE_INCLUDE_TILEMAP_H_
 
 #include <raylib.h>
 #include <stdbool.h>
@@ -31,21 +31,14 @@ typedef struct Layer {
     Tile* tiles;
     size_t tiles_length;
     size_t grid_size;
-    Texture* texture;
+    Texture texture;
     float opacity;
 } Layer;
-
-typedef struct Entity {
-    Vector2 position;
-    Rectangle source;
-    Texture* texture;
-} Entity;
 
 typedef struct Tilemap {
     size_t grid_width;
     size_t grid_height;
     HashMap* tilesets;
-    Array* entities;
     Array* layers;
     const Layer* active_layer;
 } Tilemap;
@@ -68,4 +61,4 @@ TileIter tilemap_tile_iter(Tilemap* this);
 
 Tilemap* tilemap_from_ldtk(const LDTK_Level* level);
 
-#endif  // LIB_TILEMAP_TILEMAP_H_
+#endif  // CORE_INCLUDE_TILEMAP_H_

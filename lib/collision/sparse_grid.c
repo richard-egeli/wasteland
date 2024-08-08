@@ -21,16 +21,16 @@ typedef struct DynamicCollider {
     BoxCollider* collider;
 } DynamicCollider;
 
-typedef struct SPGrid {
+typedef struct SparseGrid {
     HashMap* grid_map;
     Array* dynamic_colliders;
-} SPGrid;
+} SparseGrid;
 
-typedef struct SPGridIter {
+typedef struct SparseGridIter {
     int index;
     Array* array;
     struct SPGridIter* next;
-} SPGridIter;
+} SparseGridIter;
 
 static inline SPRegion spgrid_region(const Rect r) {
     return (SPRegion){
@@ -46,7 +46,7 @@ static inline bool spgrid_region_equal(SPRegion r1, SPRegion r2) {
            r1.y_start == r2.y_start && r1.y_end == r2.y_end;
 }
 
-void spgrid_insert(SPGrid* this, BoxCollider* box) {
+void spgrid_insert(SparseGrid* this, BoxCollider* box) {
     SPRegion r = spgrid_region(box_collider_rect(box));
 
     char grid_key[64];
@@ -83,7 +83,7 @@ void spgrid_insert(SPGrid* this, BoxCollider* box) {
     }
 }
 
-void spgrid_remove(SPGrid* this, const BoxCollider* box) {
+void spgrid_remove(SparseGrid* this, const BoxCollider* box) {
     SPRegion r = spgrid_region(box_collider_rect(box));
 
     char grid_key[64];
@@ -120,7 +120,7 @@ void spgrid_remove(SPGrid* this, const BoxCollider* box) {
     }
 }
 
-void spgrid_resolve(SPGrid* this, float delta) {
+void spgrid_resolve(SparseGrid* this, float delta) {
     size_t length = array_length(this->dynamic_colliders);
     for (int i = 0; i < length; i++) {
         DynamicCollider* col  = array_get(this->dynamic_colliders, i);
@@ -153,7 +153,7 @@ void spgrid_resolve(SPGrid* this, float delta) {
     for (int i = 0; i < length; i++) {
         DynamicCollider* col = array_get(this->dynamic_colliders, i);
         BoxCollider *b1 = col->collider, *b2 = NULL;
-        SPGridIter* iter = spgrid_iter(this, box_collider_bounds(b1));
+        SparseGridIter* iter = spgrid_iter(this, box_collider_bounds(b1));
 
         while ((b2 = spgrid_iter_next(&iter))) {
             if (b1 != b2) {
@@ -169,9 +169,9 @@ void spgrid_resolve(SPGrid* this, float delta) {
     }
 }
 
-SPGridIter* spgrid_iter(const SPGrid* this, Rect b) {
-    SPRegion r       = spgrid_region(b);
-    SPGridIter* iter = NULL;
+SparseGridIter* spgrid_iter(const SparseGrid* this, Rect b) {
+    SPRegion r           = spgrid_region(b);
+    SparseGridIter* iter = NULL;
 
     char grid_key[64];
     for (int y = r.y_start; y <= r.y_end; y++) {
@@ -180,7 +180,7 @@ SPGridIter* spgrid_iter(const SPGrid* this, Rect b) {
             snprintf(grid_key, sizeof(grid_key), "%d,%d", x, y);
 
             if (hmap_get(this->grid_map, grid_key, (void**)&array)) {
-                SPGridIter* new_iter = malloc(sizeof(*new_iter));
+                SparseGridIter* new_iter = malloc(sizeof(*new_iter));
                 if (new_iter != NULL) {
                     new_iter->next  = iter;
                     new_iter->array = array;
@@ -194,9 +194,9 @@ SPGridIter* spgrid_iter(const SPGrid* this, Rect b) {
     return iter;
 }
 
-void* spgrid_iter_next(SPGridIter** this) {
+void* spgrid_iter_next(SparseGridIter** this) {
     while (*this != NULL) {
-        SPGridIter* it = *this;
+        SparseGridIter* it = *this;
         while (it->index < array_length(it->array)) {
             void* value = array_get(it->array, it->index);
             it->index += 1;
@@ -212,13 +212,13 @@ void* spgrid_iter_next(SPGridIter** this) {
     return NULL;
 }
 
-void spgrid_free(SPGrid* this) {
+void spgrid_free(SparseGrid* this) {
     hmap_free(this->grid_map);
     free(this);
 }
 
-SPGrid* spgrid_new(void) {
-    SPGrid* sp = malloc(sizeof(*sp));
+SparseGrid* spgrid_new(void) {
+    SparseGrid* sp = malloc(sizeof(*sp));
     if (sp == NULL) {
         perror("failed to create new spatial grid");
         return NULL;

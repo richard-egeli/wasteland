@@ -1,5 +1,9 @@
 {
     "diagnostics.globals": [
-        "c_print"
+        "update",
+        "action_down",
+        "move_player",
+        "on_entity_spawn",
+        "create_entity"
     ]
 }

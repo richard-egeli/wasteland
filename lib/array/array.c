@@ -55,6 +55,10 @@ int array_find(const Array* this, const void* element) {
     return -1;
 }
 
+void array_sort(Array* this, int (*comp)(const void*, const void*)) {
+    qsort(this->elements, this->length, sizeof(void*), comp);
+}
+
 void array_reverse(Array* this) {
     size_t length = array_length(this);
     for (int i = 0; i < length / 2; i++) {

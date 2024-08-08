@@ -14,6 +14,8 @@ void* array_last(const Array* this);
 
 int array_find(const Array* this, const void* element);
 
+void array_sort(Array* this, int (*comp)(const void* a, const void* b));
+
 void array_reverse(Array* this);
 
 bool array_has(const Array* this, const void* element);

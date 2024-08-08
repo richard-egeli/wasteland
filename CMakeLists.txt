@@ -40,17 +40,17 @@ if (NOT raylib_FOUND)
   FetchContent_MakeAvailable(raylib)
 endif()
 
-find_package(flecs QUIET)
-if (NOT flecs_FOUND)
-  include(FetchContent)
-  FetchContent_Declare(
-      flecs
-      GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-      GIT_TAG v4.0.0
-    )
-
-  FetchContent_MakeAvailable(flecs)
-endif()
+# find_package(flecs QUIET)
+# if (NOT flecs_FOUND)
+#   include(FetchContent)
+#   FetchContent_Declare(
+#       flecs
+#       GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
+#       GIT_TAG v4.0.0
+#     )
+#
+#   FetchContent_MakeAvailable(flecs)
+# endif()
 
 find_package(Lua QUIET)
 if (NOT Lua_FOUND)
@@ -71,9 +71,20 @@ add_subdirectory(lib/ldtk)
 
 message(STATUS ${LUA_INCLUDE_DIR})
 
-add_executable(${PROJECT_NAME} src/main.c src/level_test.c)
-target_include_directories(${PROJECT_NAME} PUBLIC include ${LUA_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} raylib flecs collision hashmap array ldtk ${LUA_LIBRARY})
+add_executable(${PROJECT_NAME} 
+  core/main.c 
+  core/src/level.c 
+  core/src/global.c 
+  core/src/action.c 
+  core/src/entity.c
+  core/src/texture.c
+  core/src/tilemap.c
+  core/src/lua_funcs.c 
+  core/src/lua_entity.c
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC core/include ${LUA_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} raylib collision hashmap array ldtk ${LUA_LIBRARY})
 
 
 if (${BUILD_UNIT_TESTS})
