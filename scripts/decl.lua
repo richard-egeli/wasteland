@@ -13,3 +13,7 @@ function move_player(x, y) end
 -- @param x the x position of the entity
 -- @param y the y position of the entity
 function create_entity(x, y, def) end
+
+-- Get mouse position in world space
+-- @return x and y coordinates
+function get_mouse_world_position() end

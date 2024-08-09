@@ -43,3 +43,4 @@ endfunction()
 
 test(test_hashmap SOURCES test_hashmap.c LIBRARIES hashmap)
 test(test_array SOURCES test_array.c LIBRARIES array)
+test(test_sparse_grid SOURCES test_sparse_grid.c LIBRARIES collision array)

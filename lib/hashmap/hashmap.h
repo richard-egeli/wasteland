@@ -10,6 +10,8 @@ typedef struct HashMapIter HashMapIter;
 
 void* hmap_iter_next(HashMapIter* iter, const char** key);
 
+void* hmap_iter_first(HashMapIter* iter, const char** key);
+
 HashMapIter* hmap_iter(const HashMap* this);
 
 size_t hmap_capacity(const HashMap* this);

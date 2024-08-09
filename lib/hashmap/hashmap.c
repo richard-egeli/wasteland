@@ -181,22 +181,30 @@ static inline void hmap_key_free(KeyValue* kv) {
 }
 
 void* hmap_iter_next(HashMapIter* iter, const char** key) {
-    while (iter->index < iter->map->capacity) {
-        iter->next = iter->map->list[iter->index];
-        if (iter->next == NULL) {
-            iter->index++;
-            continue;
+    if (iter != NULL) {
+        while (iter->index < iter->map->capacity) {
+            if (iter->next == NULL) {
+                iter->next = iter->map->list[iter->index];
+                iter->index++;
+                continue;
+            }
+
+            if (key != NULL) *key = iter->next->key;
+            void* value = iter->next->value;
+            iter->next  = iter->next->next;
+            return value;
         }
 
-        iter->index++;
-        void* value = iter->next->value;
-        if (key != NULL) *key = iter->next->key;
-
-        return value;
+        free(iter);
     }
 
-    free(iter);
     return NULL;
+}
+
+void* hmap_iter_first(HashMapIter* iter, const char** key) {
+    iter->index = 0;
+    iter->next  = NULL;
+    return hmap_iter_next(iter, key);
 }
 
 HashMapIter* hmap_iter(const HashMap* this) {
@@ -296,6 +304,7 @@ void hmap_free(HashMap* this) {
         while (next != NULL) {
             KeyValue* temp = next;
             next           = next->next;
+            free(temp->key);
             free(temp);
         }
     }

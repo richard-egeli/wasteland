@@ -16,6 +16,14 @@ void entity_add_collider(Entity* this, int x, int y, int w, int h) {
     this->collider = col;
 }
 
+void entity_free(Entity* this) {
+    if (this->collider) {
+        box_collider_free(this->collider);
+    }
+
+    free(this);
+}
+
 Entity* entity_new() {
     Entity* entity = calloc(1, sizeof(*entity));
     return entity;

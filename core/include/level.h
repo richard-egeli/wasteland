@@ -19,8 +19,9 @@ typedef struct Level {
     Tilemap* tilemap;
     SparseGrid* sparse_grid;
     Array* entities;
-    HashMap* textures;
 } Level;
+
+void level_free(Level* this);
 
 Level* level_new(void);
 

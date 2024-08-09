@@ -4,6 +4,7 @@
         "action_down",
         "move_player",
         "on_entity_spawn",
-        "create_entity"
+        "create_entity",
+        "get_mouse_world_position"
     ]
 }

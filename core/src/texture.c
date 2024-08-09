@@ -66,6 +66,28 @@ Texture texture_from_uid(int uid) {
 void texture_unload(Texture texture) {
 }
 
+void texture_free() {
+    HashMapIter* h_it = hmap_iter(uid_lookup);
+    const char* key;
+    while (hmap_iter_next(h_it, &key)) {
+        char* temp;
+        if (hmap_take(uid_lookup, key, (void**)&temp)) {
+            free(temp);
+        }
+    }
+
+    h_it = hmap_iter(textures);
+    while (hmap_iter_next(h_it, &key)) {
+        Texture* temp;
+        if (hmap_take(textures, key, (void**)&temp)) {
+            free(temp);
+        }
+    }
+
+    hmap_free(textures);
+    hmap_free(uid_lookup);
+}
+
 void texture_init() {
     textures   = hmap_new();
     uid_lookup = hmap_new();

@@ -10,19 +10,10 @@
 #include <stdlib.h>
 
 #include "action.h"
-#include "array/array.h"
-#include "collision/box_collider.h"
-#include "collision/collision_defs.h"
-#include "collision/sparse_grid.h"
-#include "entity.h"
 #include "global.h"
 #include "level.h"
 #include "lua_funcs.h"
 #include "texture.h"
-
-static void on_collision(BoxCollider* box) {
-    printf("Colliding\n");
-}
 
 static void move_camera_left(void) {
     global.camera.target.x -= 3.0;
@@ -59,24 +50,6 @@ static void lua_init(const char* file) {
     lua_pcall(global.state, 0, 0, 0);
 }
 
-// static Entity* create_player(void) {
-//     RenderTexture rt = LoadRenderTexture(14, 14);
-//     BeginTextureMode(rt);
-//     ClearBackground(RED);
-//     EndTextureMode();
-//
-//     Entity* player             = calloc(1, sizeof(*player));
-//     player->collider           = box_collider_new(112, 190, 14, 14);
-//     player->collider->type     = COLLIDER_TYPE_DYNAMIC;
-//     player->sprite.texture     = rt.texture;
-//     player->sprite.cell_width  = 14;
-//     player->sprite.cell_height = 14;
-//     player->sprite.grid_size   = 14;
-//     player->sprite.sort_point  = 14;
-//
-//     return player;
-// }
-
 int main(void) {
     InitWindow(1280, 768, "Temp Window");
     SetTargetFPS(60);
@@ -84,14 +57,8 @@ int main(void) {
     texture_init();
 
     lua_init("scripts/main.lua");
-    // lua_register_functions();
-    Level* level = level_new();
-    // Entity* player = create_player();
+    Level* level           = level_new();
 
-    // array_push(level->entities, player);
-    // spgrid_insert(level->sparse_grid, player->collider);
-
-    // global.player          = player;
     global.camera.offset   = (Vector2){0};
     global.camera.target   = (Vector2){0};
     global.camera.rotation = 0;
@@ -131,6 +98,15 @@ int main(void) {
         BeginBlendMode(BLEND_CUSTOM_SEPARATE);
 
         level_update(level);
+
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                int px = x * 128;
+                int py = y * 128;
+                DrawRectangleLines(px, py, 128, 128, RED);
+            }
+        }
+
         EndBlendMode();
 
         EndTextureMode();
@@ -147,6 +123,8 @@ int main(void) {
         EndDrawing();
     }
 
+    level_free(level);
     lua_close(global.state);
+    texture_free();
     CloseWindow();
 }

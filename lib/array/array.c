@@ -114,13 +114,6 @@ void* array_pop(Array* this) {
 }
 
 void array_free(Array* this) {
-    for (int i = 0; i < this->length; i++) {
-        void* ptr = this->elements[i];
-        if (ptr != NULL) {
-            free(ptr);
-        }
-    }
-
     free(this->elements);
     free(this);
 }

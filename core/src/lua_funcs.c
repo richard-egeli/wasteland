@@ -3,6 +3,7 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#include <raylib.h>
 
 #include "action.h"
 #include "global.h"
@@ -15,7 +16,15 @@ static int lua_action_down(lua_State* L) {
     return 1;
 }
 
+static int lua_get_mouse_world_positon(lua_State* L) {
+    Vector2 pos = GetScreenToWorld2D(GetMousePosition(), global.camera);
+    lua_pushnumber(L, pos.x);
+    lua_pushnumber(L, pos.y);
+    return 2;
+}
+
 void lua_register_functions(lua_State* L) {
     lua_register(L, "action_down", lua_action_down);
+    lua_register(L, "get_mouse_world_position", lua_get_mouse_world_positon);
     lua_entity_register(L);
 }

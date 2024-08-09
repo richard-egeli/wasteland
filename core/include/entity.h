@@ -15,6 +15,8 @@ typedef struct Entity {
 
 void entity_add_collider(Entity* this, int x, int y, int w, int h);
 
-Entity* entity_new();
+void entity_free(Entity* this);
+
+Entity* entity_new(void);
 
 #endif  // CORE_INCLUDE_ENTITY_H_

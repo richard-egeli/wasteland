@@ -38,7 +38,6 @@ typedef struct Layer {
 typedef struct Tilemap {
     size_t grid_width;
     size_t grid_height;
-    HashMap* tilesets;
     Array* layers;
     const Layer* active_layer;
 } Tilemap;
@@ -58,6 +57,8 @@ void tilemap_tile_draw(const Tilemap* this, const Tile* tile);
 Tile* tilemap_tile_next(TileIter* it);
 
 TileIter tilemap_tile_iter(Tilemap* this);
+
+void tilemap_free(Tilemap* this);
 
 Tilemap* tilemap_from_ldtk(const LDTK_Level* level);
 

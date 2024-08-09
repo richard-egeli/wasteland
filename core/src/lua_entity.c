@@ -23,6 +23,14 @@
         value;                            \
     })
 
+#define GET_BOOL(L, key)                   \
+    ({                                     \
+        lua_getfield(L, -1, key);          \
+        bool value = lua_toboolean(L, -1); \
+        lua_pop(L, 1);                     \
+        value;                             \
+    })
+
 static int lua_entity_move(lua_State* L) {
     Entity* entity = (Entity*)luaL_checkudata(L, 1, META_TABLE);
     float x        = luaL_checknumber(L, 2);
@@ -76,13 +84,38 @@ static int lua_entity_create(lua_State* L) {
 
     lua_getfield(L, 3, "box_collider");
     if (!lua_isnil(L, -1)) {
-        int x                  = GET_INT(L, "x");
-        int y                  = GET_INT(L, "y");
-        int w                  = GET_INT(L, "w");
-        int h                  = GET_INT(L, "h");
-        entity->collider       = box_collider_new(x, y, w, h);
-        entity->collider->type = GET_INT(L, "type");
+        int x = 0;
+        int y = 0;
+        int w = 0;
+        int h = 0;
+
+        lua_getfield(L, -1, "position");
+        if (!lua_isnil(L, -1)) {
+            x += GET_INT(L, "x");
+            y += GET_INT(L, "y");
+        }
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "size");
+        if (!lua_isnil(L, -1)) {
+            w += GET_INT(L, "x");
+            h += GET_INT(L, "y");
+        }
+        lua_pop(L, 1);
+
+        x += entity->position.x;
+        y += entity->position.y;
+        entity->collider        = box_collider_new(x, y, w, h);
+        entity->collider->type  = GET_INT(L, "type");
+        entity->collider->debug = GET_BOOL(L, "debug");
         spgrid_insert(global.level->sparse_grid, entity->collider);
+
+        lua_getfield(L, -1, "origin");
+        if (!lua_isnil(L, -1)) {
+            entity->collider->origin.x = GET_INT(L, "x");
+            entity->collider->origin.y = GET_INT(L, "y");
+        }
+        lua_pop(L, 1);
     }
     lua_pop(L, 1);
 

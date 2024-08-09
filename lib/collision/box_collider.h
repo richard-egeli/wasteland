@@ -13,6 +13,7 @@ typedef struct BoxCollider {
     Point position;
     Point velocity;
     Point size;
+    bool debug;
     struct {
         bool top;
         bool bottom;
@@ -38,6 +39,8 @@ bool box_collider_overlap(BoxCollider* b1, BoxCollider* b2);
 void box_collider_resolve(BoxCollider* b1, BoxCollider* b2);
 
 void box_collider_update(BoxCollider* collider);
+
+void box_collider_free(BoxCollider* this);
 
 BoxCollider* box_collider_new(float x, float y, float width, float height);
 

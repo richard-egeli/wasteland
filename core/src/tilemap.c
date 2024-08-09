@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "array/array.h"
-#include "hashmap/hashmap.h"
 #include "ldtk/ldtk.h"
 #include "texture.h"
 
@@ -76,19 +75,33 @@ void tilemap_load_textures(Tilemap* tilemap, const LDTK_Level* level) {
     }
 }
 
+void tilemap_free(Tilemap* this) {
+    for (int i = 0; i < array_length(this->layers); i++) {
+        Layer* layer = array_get(this->layers, i);
+        free(layer->tiles);
+        free(layer);
+    }
+
+    array_free(this->layers);
+    free(this);
+}
+
 Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
     Tilemap* tilemap     = malloc(sizeof(*tilemap));
 
     tilemap->grid_width  = level->px_width;
     tilemap->grid_height = level->px_height;
     tilemap->layers      = array_new();
-    tilemap->tilesets    = hmap_new();
 
     tilemap_load_textures(tilemap, level);
 
     for (int j = 0; j < level->layer_instances_length; j++) {
-        LDTK_Layer* layer       = &level->layer_instances[j];
-        Layer* new_layer        = malloc(sizeof(*layer));
+        LDTK_Layer* layer = &level->layer_instances[j];
+        Layer* new_layer  = malloc(sizeof(*layer));
+        if (new_layer == NULL) {
+            perror("failed to malloc new layer in tilemap");
+            continue;
+        }
 
         new_layer->tiles        = NULL;
         new_layer->tiles_length = 0;
@@ -107,38 +120,41 @@ Tilemap* tilemap_from_ldtk(const LDTK_Level* level) {
         if (layer->auto_layer_tiles_length > 0) {
             new_layer->tiles_length = layer->auto_layer_tiles_length;
             new_layer->tiles = malloc(sizeof(Tile) * new_layer->tiles_length);
-
-            for (int i = 0; i < new_layer->tiles_length; i++) {
-                LDTK_Tile* tile     = &layer->auto_layer_tiles[i];
-                new_layer->tiles[i] = (Tile){
-                    .id      = tile->t,
-                    .pos_x   = tile->px[0],
-                    .pos_y   = tile->px[1],
-                    .src_x   = tile->src[0],
-                    .src_y   = tile->src[1],
-                    .flip_x  = tile->f & (1 << 0),
-                    .flip_y  = tile->f & (1 << 1),
-                    .opacity = tile->a,
-                };
+            if (new_layer->tiles != NULL) {
+                for (int i = 0; i < new_layer->tiles_length; i++) {
+                    LDTK_Tile* tile     = &layer->auto_layer_tiles[i];
+                    new_layer->tiles[i] = (Tile){
+                        .id      = tile->t,
+                        .pos_x   = tile->px[0],
+                        .pos_y   = tile->px[1],
+                        .src_x   = tile->src[0],
+                        .src_y   = tile->src[1],
+                        .flip_x  = tile->f & (1 << 0),
+                        .flip_y  = tile->f & (1 << 1),
+                        .opacity = tile->a,
+                    };
+                }
             }
         }
 
-        if (layer->grid_tiles_length > 0) {
+        else if (layer->grid_tiles_length > 0) {
             new_layer->tiles_length = layer->grid_tiles_length;
             new_layer->tiles = malloc(sizeof(Tile) * new_layer->tiles_length);
 
-            for (int i = 0; i < new_layer->tiles_length; i++) {
-                LDTK_Tile* tile     = &layer->grid_tiles[i];
-                new_layer->tiles[i] = (Tile){
-                    .id      = tile->t,
-                    .pos_x   = tile->px[0],
-                    .pos_y   = tile->px[1],
-                    .src_x   = tile->src[0],
-                    .src_y   = tile->src[1],
-                    .flip_x  = tile->f & (1 << 0),
-                    .flip_y  = tile->f & (1 << 1),
-                    .opacity = tile->a,
-                };
+            if (new_layer->tiles != NULL) {
+                for (int i = 0; i < new_layer->tiles_length; i++) {
+                    LDTK_Tile* tile     = &layer->grid_tiles[i];
+                    new_layer->tiles[i] = (Tile){
+                        .id      = tile->t,
+                        .pos_x   = tile->px[0],
+                        .pos_y   = tile->px[1],
+                        .src_x   = tile->src[0],
+                        .src_y   = tile->src[1],
+                        .flip_x  = tile->f & (1 << 0),
+                        .flip_y  = tile->f & (1 << 1),
+                        .opacity = tile->a,
+                    };
+                }
             }
         }
 

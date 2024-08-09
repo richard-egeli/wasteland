@@ -20,6 +20,21 @@ Level* level_new(void) {
     return level;
 }
 
+void level_free(Level* this) {
+    for (int i = 0; i < array_length(this->entities); i++) {
+        Entity* entity = array_get(this->entities, i);
+        if (entity->collider) {
+            spgrid_remove(this->sparse_grid, entity->collider);
+        }
+
+        entity_free(entity);
+    }
+
+    spgrid_free(this->sparse_grid);
+    tilemap_free(this->tilemap);
+    array_free(this->entities);
+}
+
 void level_load(Level* level, const char* path, const char* level_id) {
     LDTK_Root* ldtk_root   = ldtk_load(path);
     LDTK_Level* ldtk_level = ldtk_level_get(ldtk_root, level_id);
@@ -28,18 +43,10 @@ void level_load(Level* level, const char* path, const char* level_id) {
     LDTK_Entity* ent;
     LDTK_EntityIter ent_iter = ldtk_entity_iter(ldtk_level, "Entities");
     while ((ent = ldtk_entity_next(&ent_iter))) {
-        Entity* entity             = calloc(1, sizeof(*entity));
-        entity->position.x         = ent->__world_x;
-        entity->position.y         = ent->__world_y;
-        entity->sprite.cell_x      = ent->__tile.x;
-        entity->sprite.cell_y      = ent->__tile.y;
-        entity->sprite.cell_width  = ent->__tile.w;
-        entity->sprite.cell_height = ent->__tile.h;
-        entity->sprite.grid_size   = 16;
-
-        lua_entity_create_notify(ent->__world_x,
-                                 ent->__world_y,
-                                 ent->__identifier);
+        int x          = ent->__world_x;
+        int y          = ent->__world_y;
+        const char* id = ent->__identifier;
+        lua_entity_create_notify(x, y, id);
     }
 
     LDTK_IntGridValue* ig;
@@ -95,6 +102,13 @@ void level_update(Level* level) {
             };
 
             DrawTexturePro(ent->sprite.texture, src, dst, org, 0, WHITE);
+
+#ifndef NDEBUG
+            if (ent->collider && ent->collider->debug) {
+                Rect r = box_collider_rect(ent->collider);
+                DrawRectangleLines(r.x, r.y, r.w, r.h, GREEN);
+            }
+#endif
         }
     }
 }

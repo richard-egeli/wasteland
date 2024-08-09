@@ -11,6 +11,8 @@ Texture texture_from_uid(int uid);
 
 void texture_link_uid(const char* filepath, int uid);
 
+void texture_free(void);
+
 void texture_init(void);
 
 #endif  // CORE_INCLUDE_TEXTURE_H_
