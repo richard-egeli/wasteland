@@ -147,21 +147,3 @@ Entity_Defs["Door"] = {
 		},
 	},
 }
-
-function on_entity_spawn(x, y, name)
-	local def = Entity_Defs[name]
-
-	if def ~= nil then
-		local entity = create_entity(x, y, def)
-		Entities[entity] = {
-			id = entity,
-			name = name,
-		}
-		-- table.insert(Entities, entity)
-
-		if name == "Player" then
-			Player = entity
-			print(entity)
-		end
-	end
-end

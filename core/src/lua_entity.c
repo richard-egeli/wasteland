@@ -5,7 +5,9 @@
 #include <lualib.h>
 #include <math.h>
 #include <raylib.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "array/array.h"
 #include "collision/box_collider.h"
@@ -43,7 +45,16 @@ static int lua_entity_move(lua_State* L) {
     return 0;
 }
 
-static int lua_entity_position(lua_State* L) {
+static int lua_entity_set_position(lua_State* L) {
+    Entity* entity               = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+    float x                      = luaL_checknumber(L, 2);
+    float y                      = luaL_checknumber(L, 3);
+    entity->collider->position.x = x;
+    entity->collider->position.y = y;
+    return 0;
+}
+
+static int lua_entity_get_position(lua_State* L) {
     Entity* entity = (Entity*)luaL_checkudata(L, 1, META_TABLE);
     lua_pushnumber(L, entity->position.x);
     lua_pushnumber(L, entity->position.y);
@@ -73,19 +84,137 @@ static int lua_entity_destroy(lua_State* L) {
     return 0;
 }
 
+static void lua_push_int(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_pushinteger(L, field.value.int32);
+}
+
+static void lua_push_float(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_pushnumber(L, field.value.float32);
+}
+
+static void lua_push_boolean(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_pushboolean(L, field.value.boolean);
+}
+
+static void lua_push_string(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_pushstring(L, field.value.string);
+}
+
+static void lua_push_point(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    lua_pushstring(L, "x");
+    lua_pushnumber(L, field.value.point.x);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "y");
+    lua_pushnumber(L, field.value.point.y);
+    lua_settable(L, -3);
+}
+
+static void lua_push_int_array(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    for (int i = 0; i < field.value.int32_array.length; i++) {
+        lua_pushinteger(L, field.value.int32_array.ptr[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+static void lua_push_string_array(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    for (int i = 0; i < field.value.string_array.length; i++) {
+        lua_pushstring(L, field.value.string_array.ptr[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+static void lua_push_point_array(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    for (int i = 0; i < field.value.point_array.length; i++) {
+        lua_newtable(L);
+        lua_pushstring(L, "x");
+        lua_pushnumber(L, field.value.point_array.ptr[i].x);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "y");
+        lua_pushnumber(L, field.value.point_array.ptr[i].y);
+        lua_settable(L, -3);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+static void lua_push_float_array(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    for (int i = 0; i < field.value.float32_array.length; i++) {
+        lua_pushnumber(L, field.value.float32_array.ptr[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+static void lua_push_boolean_array(LDTK_Field field, void* udata) {
+    lua_State* L = udata;
+    lua_pushstring(L, field.__identifier);
+    lua_newtable(L);
+    for (int i = 0; i < field.value.boolean_array.length; i++) {
+        lua_pushboolean(L, field.value.boolean_array.ptr[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
 void lua_entity_create_notify(int x,
                               int y,
                               const char* name,
                               LDTK_Field* fields,
                               size_t len) {
-    lua_getglobal(global.state, "on_entity_spawn");
+    lua_State* L = global.state;
+    lua_getglobal(L, "on_entity_spawn");
 
-    if (lua_isfunction(global.state, -1)) {
-        lua_pushnumber(global.state, x);
-        lua_pushnumber(global.state, y);
-        lua_pushstring(global.state, name);
+    if (lua_isfunction(L, -1)) {
+        size_t p_count = 3;
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        lua_pushstring(L, name);
 
-        if (lua_pcall(global.state, 3, 0, 0) != LUA_OK) {
+        LDTK_FieldParser parser = {
+            .userdata      = L,
+            .int32         = lua_push_int,
+            .float32       = lua_push_float,
+            .boolean       = lua_push_boolean,
+            .point         = lua_push_point,
+            .string        = lua_push_string,
+            .color         = lua_push_string,
+            .int32_array   = lua_push_int_array,
+            .float32_array = lua_push_float_array,
+            .boolean_array = lua_push_boolean_array,
+            .point_array   = lua_push_point_array,
+            .string_array  = lua_push_string_array,
+            .color_array   = lua_push_string_array,
+        };
+
+        for (int i = 0; i < len; i++) {
+            if (ldtk_field_parse(&parser, fields[i])) {
+                p_count += 2;
+            }
+        }
+
+        if (lua_pcall(global.state, p_count, 0, 0) != LUA_OK) {
             const char* err = lua_tostring(global.state, -1);
             fprintf(stderr, "error lua func on_entity_spawn: %s\n", err);
             lua_pop(global.state, 1);
@@ -110,9 +239,8 @@ static void lua_collision_notify(BoxCollider* b1, BoxCollider* b2) {
 }
 
 static int lua_entity_create(lua_State* L) {
-    Entity* entity = calloc(1, sizeof(Entity));
+    Entity* entity     = calloc(1, sizeof(Entity));
 
-    printf("Creating Entity\n");
     entity->position.x = luaL_checknumber(L, 1);
     entity->position.y = luaL_checknumber(L, 2);
     entity->collider   = NULL;
@@ -193,8 +321,11 @@ void lua_entity_register(lua_State* L) {
     lua_pushcfunction(L, lua_entity_move);
     lua_setfield(L, -2, "move");
 
-    lua_pushcfunction(L, lua_entity_position);
+    lua_pushcfunction(L, lua_entity_get_position);
     lua_setfield(L, -2, "get_position");
+
+    lua_pushcfunction(L, lua_entity_set_position);
+    lua_setfield(L, -2, "set_position");
 
     lua_pushcfunction(L, lua_entity_mouse_direction);
     lua_setfield(L, -2, "get_mouse_direction");

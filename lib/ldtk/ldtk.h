@@ -8,6 +8,19 @@
 #define LDTK_ASSET_PREFIX "assets"
 #endif
 
+#define LDTK_INT          "Int"
+#define LDTK_FLOAT        "Float"
+#define LDTK_STRING       "String"
+#define LDTK_BOOL         "Boolean"
+#define LDTK_POINT        "Point"
+#define LDTK_COLOR        "Color"
+#define LDTK_INT_ARRAY    "Array<Int>"
+#define LDTK_FLOAT_ARRAY  "Array<Float>"
+#define LDTK_STRING_ARRAY "Array<String>"
+#define LDTK_BOOL_ARRAY   "Array<Boolean>"
+#define LDTK_POINT_ARRAY  "Array<Point>"
+#define LDTK_COLOR_ARRAY  "Array<Color>"
+
 typedef struct LDTK_Point {
     float x;
     float y;
@@ -166,6 +179,22 @@ typedef struct LDTK_World {
     LDTK_WorldLayout world_layout;
 } LDTK_World;
 
+typedef struct LDTK_FieldParser {
+    void* userdata;
+    void (*int32)(LDTK_Field field, void* userdata);
+    void (*float32)(LDTK_Field field, void* userdata);
+    void (*boolean)(LDTK_Field field, void* userdata);
+    void (*point)(LDTK_Field field, void* userdata);
+    void (*string)(LDTK_Field field, void* userdata);
+    void (*color)(LDTK_Field field, void* userdata);
+    void (*int32_array)(LDTK_Field field, void* userdata);
+    void (*float32_array)(LDTK_Field field, void* userdata);
+    void (*boolean_array)(LDTK_Field field, void* userdata);
+    void (*point_array)(LDTK_Field field, void* userdata);
+    void (*string_array)(LDTK_Field field, void* userdata);
+    void (*color_array)(LDTK_Field field, void* userdata);
+} LDTK_FieldParser;
+
 typedef struct LDTK_Root {
     char* bg_color;
     bool external_levels;
@@ -197,6 +226,8 @@ typedef struct LDTK_EntityIter {
     LDTK_Entity* entity;
     size_t index;
 } LDTK_EntityIter;
+
+bool ldtk_field_parse(const LDTK_FieldParser* parser, LDTK_Field field);
 
 LDTK_IntGridValue* ldtk_intgrid_next(LDTK_IntGridIter* iter);
 

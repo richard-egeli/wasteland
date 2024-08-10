@@ -43,7 +43,7 @@
 #define FREE(el) \
     if (el != NULL) free(el)
 
-static void ldtk_field_parse(LDTK_Entity* this, yyjson_val* root) {
+static void ldtk_json_field_parse(LDTK_Entity* this, yyjson_val* root) {
     yyjson_val* fields = yyjson_obj_get(root, "fieldInstances");
 
     size_t size        = yyjson_arr_size(fields);
@@ -267,7 +267,7 @@ static void ldtk_entity_parse(LDTK_Layer* this, yyjson_val* root) {
             it.__tile.h           = INT(tile, "h");
         }
 
-        ldtk_field_parse(&it, json);
+        ldtk_json_field_parse(&it, json);
         this->entity_instances[idx] = it;
     }
 }
@@ -478,6 +478,43 @@ static size_t ldtk_load_file_content(const char* path, char** content) {
 
     *content = buffer;
     return length;
+}
+
+static bool ldtk_field_type_equal(LDTK_Field field, const char* type) {
+    return strcmp(type, field.__type) == 0;
+}
+
+#define PCALL(p, v, u) p ? (p(v, u), true) : false
+bool ldtk_field_parse(const LDTK_FieldParser* parser, LDTK_Field field) {
+    void* data = parser->userdata;
+
+    if (ldtk_field_type_equal(field, LDTK_INT)) {
+        return PCALL(parser->int32, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_FLOAT)) {
+        return PCALL(parser->float32, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_BOOL)) {
+        return PCALL(parser->boolean, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_POINT)) {
+        return PCALL(parser->point, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_STRING)) {
+        return PCALL(parser->string, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_COLOR)) {
+        return PCALL(parser->color, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_INT_ARRAY)) {
+        return PCALL(parser->int32_array, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_FLOAT_ARRAY)) {
+        return PCALL(parser->float32_array, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_BOOL_ARRAY)) {
+        return PCALL(parser->boolean_array, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_POINT_ARRAY)) {
+        return PCALL(parser->point_array, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_STRING_ARRAY)) {
+        return PCALL(parser->string_array, field, data);
+    } else if (ldtk_field_type_equal(field, LDTK_COLOR_ARRAY)) {
+        return PCALL(parser->color_array, field, data);
+    }
+
+    return false;
 }
 
 LDTK_IntGridValue* ldtk_intgrid_next(LDTK_IntGridIter* iter) {

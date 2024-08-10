@@ -51,6 +51,13 @@ end
 ---@field name string
 Entity = {}
 
+--- Set the position directly
+---@param x number the x coordinate
+---@param y number the y coordinate
+function Entity:set_position(x, y)
+	error("function implemented in C and should not be called in Lua")
+end
+
 ---@return number x, number y position of the entity in coordinates
 function Entity:get_position()
 	error("function implemented in C and should not be called in Lua")

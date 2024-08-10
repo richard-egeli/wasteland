@@ -47,7 +47,7 @@ function update(delta_time)
 		if action_down("space") then
 			local x, y = Player:get_position()
 			local dx, dy = Player:get_mouse_direction()
-			local entity = create_entity(x, y, Entity_Defs["bullet"])
+			local entity = create_entity(x, y, Entity_Defs["Bullet"])
 			local proj = Projectile:new(entity, { x = -dx, y = -dy }, 300)
 			table.insert(projectiles, proj)
 		end
@@ -70,5 +70,38 @@ end
 ---@param e1 Entity
 ---@param e2 Entity
 function collision(e1, e2)
-	print(Entities[e1].name .. " colliding with " .. Entities[e2].name)
+	local entity = Entities[e1]
+
+	if entity["Test"] == "Teleport" then
+		print(entity["Point"])
+		local p = entity["Point"]
+		e2:set_position(p.x * 16, p.y * 16)
+	end
+	print(entity["Test"])
+end
+
+function on_entity_spawn(x, y, name, ...)
+	local args = { ... }
+	local def = Entity_Defs[name]
+
+	if def ~= nil then
+		local entity_id = create_entity(x, y, def)
+		Entities[entity_id] = {
+			id = entity_id,
+			name = name,
+		}
+
+		local entity = Entities[entity_id]
+		if name == "Player" then
+			Player = entity_id
+		end
+
+		for i = 1, #args, 2 do
+			local id = args[i]
+			local value = args[i + 1]
+			if id ~= nil and value ~= nil then
+				entity[id] = value
+			end
+		end
+	end
 end
