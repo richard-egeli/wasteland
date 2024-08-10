@@ -221,7 +221,8 @@ void spgrid_resolve(SparseGrid* this, float delta) {
 
         SparseObject* obj          = NULL;
         while ((obj = spgrid_region_iter_next(&iter))) {
-            if (b1 != obj->value) {
+            BoxCollider* b2 = obj->value;
+            if (b1 != b2) {
                 box_collider_resolve(b1, obj->value);
             }
         }

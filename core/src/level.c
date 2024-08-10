@@ -43,10 +43,13 @@ void level_load(Level* level, const char* path, const char* level_id) {
     LDTK_Entity* ent;
     LDTK_EntityIter ent_iter = ldtk_entity_iter(ldtk_level, "Entities");
     while ((ent = ldtk_entity_next(&ent_iter))) {
-        int x          = ent->__world_x;
-        int y          = ent->__world_y;
-        const char* id = ent->__identifier;
-        lua_entity_create_notify(x, y, id);
+        int x              = ent->__world_x;
+        int y              = ent->__world_y;
+        const char* id     = ent->__identifier;
+        LDTK_Field* fields = ent->field_instances;
+        size_t len         = ent->field_instances_length;
+
+        lua_entity_create_notify(x, y, id, fields, len);
     }
 
     LDTK_IntGridValue* ig;
@@ -68,6 +71,20 @@ static int ysort(const void* a, const void* b) {
 }
 
 void level_update(Level* level) {
+    for (int i = 0; i < array_length(level->entities); i++) {
+        Entity* e = array_get(level->entities, i);
+        if (e->destroy) {
+            if (e->collider) {
+                spgrid_remove(level->sparse_grid, e->collider);
+            }
+
+            int last = array_length(level->entities) - 1;
+            array_set(level->entities, i, array_get(level->entities, last));
+            array_pop(level->entities);
+            entity_free(e);
+        }
+    }
+
     spgrid_resolve(level->sparse_grid, GetFrameTime());
     array_sort(level->entities, ysort);
 

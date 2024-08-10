@@ -2,6 +2,7 @@
 #define CORE_INCLUDE_ENTITY_H_
 
 #include <raylib.h>
+#include <stdbool.h>
 
 #include "sprite.h"
 
@@ -11,6 +12,7 @@ typedef struct Entity {
     Sprite sprite;
     Vector2 position;
     BoxCollider* collider;
+    bool destroy;
 } Entity;
 
 void entity_add_collider(Entity* this, int x, int y, int w, int h);

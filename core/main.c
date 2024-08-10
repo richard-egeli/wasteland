@@ -51,7 +51,7 @@ static void lua_init(const char* file) {
 }
 
 int main(void) {
-    InitWindow(1280, 768, "Temp Window");
+    InitWindow(1280, 720, "Temp Window");
     SetTargetFPS(60);
 
     texture_init();
@@ -62,18 +62,19 @@ int main(void) {
     global.camera.offset   = (Vector2){0};
     global.camera.target   = (Vector2){0};
     global.camera.rotation = 0;
-    global.camera.zoom     = 1.0;
+    global.camera.zoom     = 2.0;
     global.level           = level;
 
     action_register("move_up", 'w');
     action_register("move_left", 'a');
     action_register("move_right", 'd');
     action_register("move_down", 's');
+    action_register("space", ' ');
 
     // NOTE: fix for blending of alpha colors on render textures
     rlSetBlendFactorsSeparate(0x0302, 0x0303, 1, 0x0303, 0x8006, 0x8006);
 
-    RenderTexture rt = LoadRenderTexture(1280, 768);
+    RenderTexture rt = LoadRenderTexture(1280, 720);
 
     level_load(level, "assets/test.ldtk", "Level_0");
 
@@ -99,14 +100,6 @@ int main(void) {
 
         level_update(level);
 
-        for (int y = 0; y < 10; y++) {
-            for (int x = 0; x < 10; x++) {
-                int px = x * 128;
-                int py = y * 128;
-                DrawRectangleLines(px, py, 128, 128, RED);
-            }
-        }
-
         EndBlendMode();
 
         EndTextureMode();
@@ -116,8 +109,9 @@ int main(void) {
         BeginMode2D(global.camera);
         float scale   = 2.4;
         Rectangle src = {0, 0, rt.texture.width, -rt.texture.height};
-        Rectangle dst = {0, 0, 1280 * scale, 768 * scale};
+        Rectangle dst = {0, 0, GetScreenWidth(), GetScreenHeight()};
         DrawTexturePro(rt.texture, src, dst, (Vector2){0}, 0, WHITE);
+        DrawFPS(0, 0);
 
         EndMode2D();
         EndDrawing();

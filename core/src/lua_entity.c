@@ -3,6 +3,8 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#include <math.h>
+#include <raylib.h>
 #include <stdlib.h>
 
 #include "array/array.h"
@@ -10,6 +12,7 @@
 #include "collision/sparse_grid.h"
 #include "entity.h"
 #include "global.h"
+#include "ldtk/ldtk.h"
 #include "level.h"
 #include "texture.h"
 
@@ -40,7 +43,41 @@ static int lua_entity_move(lua_State* L) {
     return 0;
 }
 
-void lua_entity_create_notify(int x, int y, const char* name) {
+static int lua_entity_position(lua_State* L) {
+    Entity* entity = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+    lua_pushnumber(L, entity->position.x);
+    lua_pushnumber(L, entity->position.y);
+    return 2;
+}
+
+static int lua_entity_mouse_direction(lua_State* L) {
+    Entity* entity    = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+
+    Vector2 mouse_pos = GetMousePosition();
+    mouse_pos.x /= 2;
+    mouse_pos.y /= 2;
+
+    float x  = entity->position.x - mouse_pos.x;
+    float y  = entity->position.y - mouse_pos.y;
+    float m  = sqrtf(x * x + y * y);
+    float nx = x / m;
+    float ny = y / m;
+    lua_pushnumber(L, nx);
+    lua_pushnumber(L, ny);
+    return 2;
+}
+
+static int lua_entity_destroy(lua_State* L) {
+    Entity* entity  = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+    entity->destroy = true;
+    return 0;
+}
+
+void lua_entity_create_notify(int x,
+                              int y,
+                              const char* name,
+                              LDTK_Field* fields,
+                              size_t len) {
     lua_getglobal(global.state, "on_entity_spawn");
 
     if (lua_isfunction(global.state, -1)) {
@@ -56,6 +93,19 @@ void lua_entity_create_notify(int x, int y, const char* name) {
     } else {
         fprintf(stderr, "on_entity_spawn is not a function\n");
         lua_pop(global.state, 1);
+    }
+}
+
+static void lua_collision_notify(BoxCollider* b1, BoxCollider* b2) {
+    lua_getglobal(global.state, "collision");
+    if (lua_isfunction(global.state, -1)) {
+        lua_pushlightuserdata(global.state, (Entity*)b1->id);
+        lua_pushlightuserdata(global.state, (Entity*)b2->id);
+        if (lua_pcall(global.state, 2, 0, 0) != LUA_OK) {
+            fprintf(stderr, "Error: %s\n", lua_tostring(global.state, -1));
+        }
+    } else {
+        lua_pop(global.state, -1);
     }
 }
 
@@ -105,9 +155,13 @@ static int lua_entity_create(lua_State* L) {
 
         x += entity->position.x;
         y += entity->position.y;
-        entity->collider        = box_collider_new(x, y, w, h);
-        entity->collider->type  = GET_INT(L, "type");
-        entity->collider->debug = GET_BOOL(L, "debug");
+        entity->collider               = box_collider_new(x, y, w, h);
+        entity->collider->type         = GET_INT(L, "type");
+        entity->collider->mask         = GET_INT(L, "mask");
+        entity->collider->debug        = GET_BOOL(L, "debug");
+        entity->collider->trigger      = GET_BOOL(L, "trigger");
+        entity->collider->id           = (uint64_t)entity;
+        entity->collider->on_collision = lua_collision_notify;
         spgrid_insert(global.level->sparse_grid, entity->collider);
 
         lua_getfield(L, -1, "origin");
@@ -138,6 +192,15 @@ void lua_entity_register(lua_State* L) {
 
     lua_pushcfunction(L, lua_entity_move);
     lua_setfield(L, -2, "move");
+
+    lua_pushcfunction(L, lua_entity_position);
+    lua_setfield(L, -2, "get_position");
+
+    lua_pushcfunction(L, lua_entity_mouse_direction);
+    lua_setfield(L, -2, "get_mouse_direction");
+
+    lua_pushcfunction(L, lua_entity_destroy);
+    lua_setfield(L, -2, "destroy");
 
     lua_settable(L, -3);
     lua_pop(L, 1);

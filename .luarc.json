@@ -5,6 +5,11 @@
         "move_player",
         "on_entity_spawn",
         "create_entity",
-        "get_mouse_world_position"
+        "get_mouse_world_position",
+        "action_pressed",
+        "action_up",
+        "action_released",
+        "get_time",
+        "collision"
     ]
 }

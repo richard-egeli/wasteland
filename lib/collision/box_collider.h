@@ -14,20 +14,20 @@ typedef struct BoxCollider {
     Point velocity;
     Point size;
     bool debug;
+    bool trigger;
+    ColliderType type;
+    void (*on_collision)(struct BoxCollider* this, struct BoxCollider* target);
     struct {
         bool top;
         bool bottom;
         bool left;
         bool right;
     } collision;
-    ColliderType type;
-    bool trigger;
     struct {
         float accum;
         float force;
         bool enabled;
     } gravity;
-    void (*on_collision)(struct BoxCollider* this);
 } BoxCollider;
 
 Rect box_collider_rect(const BoxCollider* col);

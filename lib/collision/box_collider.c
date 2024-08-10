@@ -1,7 +1,6 @@
 #include "collision/box_collider.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "collision/collision_defs.h"
@@ -71,7 +70,7 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
 
         if (b2->trigger) {
             if (b2->on_collision) {
-                b2->on_collision(b1);
+                b2->on_collision(b2, b1);
             }
 
             return;
@@ -150,22 +149,11 @@ void box_collider_free(BoxCollider *this) {
 }
 
 BoxCollider *box_collider_new(float x, float y, float width, float height) {
-    BoxCollider *col      = malloc(sizeof(*col));
-    col->id               = 0;
-    col->mask             = 0xFFFFFFFF;
-    col->size             = (Point){width, height};
-    col->position         = (Point){x, y};
-    col->origin           = (Point){0};
-    col->velocity         = (Point){0};
-    col->type             = COLLIDER_TYPE_STATIC;
-    col->collision.top    = false;
-    col->collision.bottom = false;
-    col->collision.right  = false;
-    col->collision.left   = false;
-    col->trigger          = false;
-    col->on_collision     = NULL;
-    col->gravity.accum    = 0.0f;
-    col->gravity.enabled  = false;
-    col->gravity.force    = 0.98f;
+    BoxCollider *col   = calloc(1, sizeof(*col));
+    col->mask          = 0xFFFFFFFF;
+    col->size          = (Point){width, height};
+    col->position      = (Point){x, y};
+    col->type          = COLLIDER_TYPE_STATIC;
+    col->gravity.force = 0.98f;
     return col;
 }

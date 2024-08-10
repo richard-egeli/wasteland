@@ -20,7 +20,6 @@ void entity_free(Entity* this) {
     if (this->collider) {
         box_collider_free(this->collider);
     }
-
     free(this);
 }
 

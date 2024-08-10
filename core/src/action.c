@@ -81,7 +81,6 @@ bool action_released(const char* key) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];
-            printf("Key %d\n", key);
             if (key == 0) break;
 
             if (IsKeyReleased(key)) {
@@ -100,7 +99,6 @@ bool action_pressed(const char* key) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];
-            printf("Key %d\n", key);
             if (key == 0) break;
 
             if (IsKeyPressed(key)) {
