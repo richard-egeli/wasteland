@@ -18,8 +18,8 @@ void level_entities_load(Level* level, const char* key, entity_callback cb) {
     LDTK_Level* l            = level->ldtk.level;
     LDTK_EntityIter ent_iter = ldtk_entity_iter(l, key);
     while ((ent = ldtk_entity_next(&ent_iter))) {
-        int x              = ent->__world_x;
-        int y              = ent->__world_y;
+        int x              = ent->px[0];
+        int y              = ent->px[1];
         const char* id     = ent->__identifier;
         LDTK_Field* fields = ent->field_instances;
         size_t len         = ent->field_instances_length;

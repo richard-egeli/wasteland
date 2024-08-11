@@ -68,7 +68,7 @@ static int lua_entity_set_position(lua_State* L) {
 
 static int lua_entity_get_position(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
-    Entity* entity       = (void*)object->entity;
+    Entity* entity       = object->entity;
     lua_pushnumber(L, entity->position.x);
     lua_pushnumber(L, entity->position.y);
     return 2;
@@ -270,6 +270,9 @@ void lua_entity_create(Level* level, lua_State* L) {
     entity->position.x   = luaL_checknumber(L, 2);
     entity->position.y   = luaL_checknumber(L, 3);
     entity->collider     = NULL;
+
+    lua_newtable(L);     // Create a new table for this entity's environment
+    lua_setfenv(L, -2);  // Set this table as the environment for the userdata
 
     lua_getfield(L, 4, "sprite");
     if (!lua_isnil(L, -1)) {
