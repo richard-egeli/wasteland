@@ -4,3 +4,4 @@ bin/
 build/
 assets/samples/
 .DS_Store
+external/

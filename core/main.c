@@ -3,6 +3,7 @@
 #include <complex.h>
 #include <lauxlib.h>
 #include <lua.h>
+#include <luajit.h>
 #include <lualib.h>
 #include <raylib.h>
 #include <rlgl.h>
@@ -41,7 +42,7 @@ static void lua_init(const char* file) {
     luaL_openlibs(global.state);
     lua_register_functions(global.state);
 
-    if (luaL_loadfile(global.state, file)) {
+    if (luaL_loadfile(global.state, file) != LUA_OK) {
         fprintf(stderr, "Error: %s\n", lua_tostring(global.state, -1));
         lua_close(global.state);
         exit(EXIT_FAILURE);
@@ -56,14 +57,10 @@ int main(void) {
 
     texture_init();
 
-    lua_init("scripts/main.lua");
-    Level* level           = level_new();
-
     global.camera.offset   = (Vector2){0};
     global.camera.target   = (Vector2){0};
     global.camera.rotation = 0;
     global.camera.zoom     = 2.0;
-    global.level           = level;
 
     action_register("move_up", 'w');
     action_register("move_left", 'a');
@@ -76,7 +73,7 @@ int main(void) {
 
     RenderTexture rt = LoadRenderTexture(1280, 720);
 
-    level_load(level, "assets/test.ldtk", "Level_0");
+    lua_init("scripts/main.lua");
 
     while (!WindowShouldClose()) {
         if (IsKeyDown(KEY_UP)) move_camera_up();
@@ -98,7 +95,9 @@ int main(void) {
         ClearBackground(WHITE);
         BeginBlendMode(BLEND_CUSTOM_SEPARATE);
 
-        level_update(level);
+        if (global.level) {
+            level_update(global.level);
+        }
 
         EndBlendMode();
 
@@ -117,7 +116,6 @@ int main(void) {
         EndDrawing();
     }
 
-    level_free(level);
     lua_close(global.state);
     texture_free();
     CloseWindow();

@@ -19,7 +19,9 @@ void entity_add_collider(Entity* this, int x, int y, int w, int h) {
 void entity_free(Entity* this) {
     if (this->collider) {
         box_collider_free(this->collider);
+        this->collider = NULL;
     }
+
     free(this);
 }
 

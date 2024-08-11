@@ -12,7 +12,7 @@ typedef struct Entity {
     Sprite sprite;
     Vector2 position;
     BoxCollider* collider;
-    bool destroy;
+    bool destroyed;
 } Entity;
 
 void entity_add_collider(Entity* this, int x, int y, int w, int h);

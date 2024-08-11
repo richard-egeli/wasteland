@@ -36,17 +36,29 @@
         value;                             \
     })
 
+typedef struct EntityObject {
+    Entity* entity;
+    Level* level;
+} EntityObject;
+
 static int lua_entity_move(lua_State* L) {
-    Entity* entity = (Entity*)luaL_checkudata(L, 1, META_TABLE);
-    float x        = luaL_checknumber(L, 2);
-    float y        = luaL_checknumber(L, 3);
-    entity->collider->velocity.x += x;
-    entity->collider->velocity.y += y;
+    EntityObject* object = lua_touserdata(L, 1);
+    Entity* entity       = (void*)object->entity;
+    float x              = luaL_checknumber(L, 2);
+    float y              = luaL_checknumber(L, 3);
+    if (entity->collider) {
+        entity->collider->velocity.x += x;
+        entity->collider->velocity.y += y;
+    } else {
+        entity->position.x += x;
+        entity->position.y += y;
+    }
     return 0;
 }
 
 static int lua_entity_set_position(lua_State* L) {
-    Entity* entity               = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+    EntityObject* object         = lua_touserdata(L, 1);
+    Entity* entity               = (void*)object->entity;
     float x                      = luaL_checknumber(L, 2);
     float y                      = luaL_checknumber(L, 3);
     entity->collider->position.x = x;
@@ -55,16 +67,24 @@ static int lua_entity_set_position(lua_State* L) {
 }
 
 static int lua_entity_get_position(lua_State* L) {
-    Entity* entity = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+    EntityObject* object = lua_touserdata(L, 1);
+    Entity* entity       = (void*)object->entity;
     lua_pushnumber(L, entity->position.x);
     lua_pushnumber(L, entity->position.y);
     return 2;
 }
 
-static int lua_entity_mouse_direction(lua_State* L) {
-    Entity* entity    = (Entity*)luaL_checkudata(L, 1, META_TABLE);
+static int lua_entity_get_id(lua_State* L) {
+    EntityObject* object = lua_touserdata(L, 1);
+    lua_pushlightuserdata(L, object->entity);
+    return 1;
+}
 
-    Vector2 mouse_pos = GetMousePosition();
+static int lua_entity_mouse_direction(lua_State* L) {
+    EntityObject* object = lua_touserdata(L, 1);
+    Entity* entity       = (void*)object->entity;
+
+    Vector2 mouse_pos    = GetMousePosition();
     mouse_pos.x /= 2;
     mouse_pos.y /= 2;
 
@@ -76,12 +96,6 @@ static int lua_entity_mouse_direction(lua_State* L) {
     lua_pushnumber(L, nx);
     lua_pushnumber(L, ny);
     return 2;
-}
-
-static int lua_entity_destroy(lua_State* L) {
-    Entity* entity  = (Entity*)luaL_checkudata(L, 1, META_TABLE);
-    entity->destroy = true;
-    return 0;
 }
 
 static void lua_push_int(LDTK_Field field, void* udata) {
@@ -178,51 +192,31 @@ static void lua_push_boolean_array(LDTK_Field field, void* udata) {
     }
 }
 
-void lua_entity_create_notify(int x,
-                              int y,
-                              const char* name,
-                              LDTK_Field* fields,
-                              size_t len) {
-    lua_State* L = global.state;
-    lua_getglobal(L, "on_entity_spawn");
+size_t lua_entity_push_fields(lua_State* L, LDTK_Field* fields, size_t len) {
+    size_t count            = 0;
+    LDTK_FieldParser parser = {
+        .userdata      = L,
+        .int32         = lua_push_int,
+        .float32       = lua_push_float,
+        .boolean       = lua_push_boolean,
+        .point         = lua_push_point,
+        .string        = lua_push_string,
+        .color         = lua_push_string,
+        .int32_array   = lua_push_int_array,
+        .float32_array = lua_push_float_array,
+        .boolean_array = lua_push_boolean_array,
+        .point_array   = lua_push_point_array,
+        .string_array  = lua_push_string_array,
+        .color_array   = lua_push_string_array,
+    };
 
-    if (lua_isfunction(L, -1)) {
-        size_t p_count = 3;
-        lua_pushnumber(L, x);
-        lua_pushnumber(L, y);
-        lua_pushstring(L, name);
-
-        LDTK_FieldParser parser = {
-            .userdata      = L,
-            .int32         = lua_push_int,
-            .float32       = lua_push_float,
-            .boolean       = lua_push_boolean,
-            .point         = lua_push_point,
-            .string        = lua_push_string,
-            .color         = lua_push_string,
-            .int32_array   = lua_push_int_array,
-            .float32_array = lua_push_float_array,
-            .boolean_array = lua_push_boolean_array,
-            .point_array   = lua_push_point_array,
-            .string_array  = lua_push_string_array,
-            .color_array   = lua_push_string_array,
-        };
-
-        for (int i = 0; i < len; i++) {
-            if (ldtk_field_parse(&parser, fields[i])) {
-                p_count += 2;
-            }
+    for (int i = 0; i < len; i++) {
+        if (ldtk_field_parse(&parser, fields[i])) {
+            count += 2;
         }
-
-        if (lua_pcall(global.state, p_count, 0, 0) != LUA_OK) {
-            const char* err = lua_tostring(global.state, -1);
-            fprintf(stderr, "error lua func on_entity_spawn: %s\n", err);
-            lua_pop(global.state, 1);
-        }
-    } else {
-        fprintf(stderr, "on_entity_spawn is not a function\n");
-        lua_pop(global.state, 1);
     }
+
+    return count;
 }
 
 static void lua_collision_notify(BoxCollider* b1, BoxCollider* b2) {
@@ -238,14 +232,46 @@ static void lua_collision_notify(BoxCollider* b1, BoxCollider* b2) {
     }
 }
 
-static int lua_entity_create(lua_State* L) {
-    Entity* entity     = calloc(1, sizeof(Entity));
+static int lua_entity_gc(lua_State* L) {
+    EntityObject* object = lua_touserdata(L, 1);
 
-    entity->position.x = luaL_checknumber(L, 1);
-    entity->position.y = luaL_checknumber(L, 2);
-    entity->collider   = NULL;
+    if (object && object->entity) {
+        Entity* entity = object->entity;
+        Level* level   = object->level;
+        if (entity->collider) {
+            spgrid_remove(level->sparse_grid, entity->collider);
+        }
 
-    lua_getfield(L, 3, "sprite");
+        int idx = array_find(level->entities, entity);
+        if (idx >= 0) {
+            size_t last_idx = array_length(level->entities) - 1;
+            void* last      = array_get(level->entities, last_idx);
+            array_set(level->entities, idx, last);
+            array_pop(level->entities);
+        }
+
+        entity_free(entity);
+        object->entity = NULL;
+    }
+
+    return 0;
+}
+
+static int lua_entity_destroy(lua_State* L) {
+    return lua_entity_gc(L);
+}
+
+void lua_entity_create(Level* level, lua_State* L) {
+    EntityObject* object = lua_newuserdata(L, sizeof(*object));
+    Entity* entity       = calloc(1, sizeof(Entity));
+
+    object->level        = level;
+    object->entity       = entity;
+    entity->position.x   = luaL_checknumber(L, 2);
+    entity->position.y   = luaL_checknumber(L, 3);
+    entity->collider     = NULL;
+
+    lua_getfield(L, 4, "sprite");
     if (!lua_isnil(L, -1)) {
         lua_getfield(L, -1, "texture");
         entity->sprite.texture = texture_load(lua_tostring(L, -1));
@@ -260,7 +286,7 @@ static int lua_entity_create(lua_State* L) {
     }
     lua_pop(L, 1);
 
-    lua_getfield(L, 3, "box_collider");
+    lua_getfield(L, 4, "box_collider");
     if (!lua_isnil(L, -1)) {
         int x = 0;
         int y = 0;
@@ -290,33 +316,67 @@ static int lua_entity_create(lua_State* L) {
         entity->collider->trigger      = GET_BOOL(L, "trigger");
         entity->collider->id           = (uint64_t)entity;
         entity->collider->on_collision = lua_collision_notify;
-        spgrid_insert(global.level->sparse_grid, entity->collider);
+        spgrid_insert(level->sparse_grid, entity->collider);
 
         lua_getfield(L, -1, "origin");
         if (!lua_isnil(L, -1)) {
             entity->collider->origin.x = GET_INT(L, "x");
             entity->collider->origin.y = GET_INT(L, "y");
         }
+
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
 
-    array_push(global.level->entities, entity);
-    lua_pushlightuserdata(L, entity);
+    array_push(level->entities, entity);
     luaL_getmetatable(L, META_TABLE);
     if (!lua_istable(L, -1)) {
-        return luaL_error(L, "Metatable not found %s", META_TABLE);
+        luaL_error(L, "Metatable not found %s", META_TABLE);
     }
     lua_setmetatable(L, -2);
+}
+
+static int lua_entity_index(lua_State* L) {
+    lua_getfenv(L, 1);
+    lua_pushvalue(L, 2);
+    lua_gettable(L, -2);
+
+    if (!lua_isnil(L, -1)) {
+        return 1;
+    }
+
+    lua_pop(L, 2);
+
+    lua_getmetatable(L, 1);
+    lua_pushvalue(L, 2);
+    lua_gettable(L, -2);
 
     return 1;
+}
+
+static int lua_entity_newindex(lua_State* L) {
+    lua_getfenv(L, 1);
+    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 3);
+    lua_settable(L, -3);
+
+    return 0;
 }
 
 void lua_entity_register(lua_State* L) {
     luaL_newmetatable(L, META_TABLE);
 
-    lua_pushfstring(L, "__index");
-    lua_newtable(L);
+    lua_pushcfunction(L, lua_entity_gc);
+    lua_setfield(L, -2, "__gc");
+
+    lua_pushcfunction(L, lua_entity_index);
+    lua_setfield(L, -2, "__index");
+
+    lua_pushcfunction(L, lua_entity_newindex);
+    lua_setfield(L, -2, "__newindex");
+
+    lua_pushcfunction(L, lua_entity_get_id);
+    lua_setfield(L, -2, "get_id");
 
     lua_pushcfunction(L, lua_entity_move);
     lua_setfield(L, -2, "move");
@@ -333,8 +393,7 @@ void lua_entity_register(lua_State* L) {
     lua_pushcfunction(L, lua_entity_destroy);
     lua_setfield(L, -2, "destroy");
 
-    lua_settable(L, -3);
     lua_pop(L, 1);
 
-    lua_register(L, "create_entity", lua_entity_create);
+    // lua_register(L, "create_entity", lua_entity_create);
 }

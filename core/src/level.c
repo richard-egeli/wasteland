@@ -8,16 +8,71 @@
 #include "collision/box_collider.h"
 #include "collision/sparse_grid.h"
 #include "entity.h"
+#include "global.h"
 #include "ldtk/ldtk.h"
 #include "lua_entity.h"
 #include "tilemap.h"
 
-Level* level_new(void) {
-    Level* level       = calloc(1, sizeof(*level));
-    level->tilemap     = NULL;
-    level->sparse_grid = spgrid_new();
-    level->entities    = array_new();
-    return level;
+void level_entities_load(Level* level, const char* key, entity_callback cb) {
+    LDTK_Entity* ent;
+    LDTK_Level* l            = level->ldtk.level;
+    LDTK_EntityIter ent_iter = ldtk_entity_iter(l, key);
+    while ((ent = ldtk_entity_next(&ent_iter))) {
+        int x              = ent->__world_x;
+        int y              = ent->__world_y;
+        const char* id     = ent->__identifier;
+        LDTK_Field* fields = ent->field_instances;
+        size_t len         = ent->field_instances_length;
+        cb(x, y, id, fields, len);
+    }
+}
+
+Level* level_load(const char* path, const char* level_id) {
+    LDTK_Root* ldtk_root = ldtk_load(path);
+
+    if (ldtk_root != NULL) {
+        Level* level           = calloc(1, sizeof(Level));
+        LDTK_Level* ldtk_level = ldtk_level_get(ldtk_root, level_id);
+        if (ldtk_level == NULL) {
+            perror("tried to load unknown level inside ldtk map");
+            ldtk_free(ldtk_root);
+            free(level);
+            return NULL;
+        }
+
+        level->tilemap     = tilemap_from_ldtk(ldtk_level);
+        level->sparse_grid = spgrid_new();
+        level->entities    = array_new();
+        level->ldtk.level  = ldtk_level;
+        level->ldtk.root   = ldtk_root;
+        global.level       = level;
+
+        LDTK_IntGridValue* ig;
+        LDTK_IntGridIter ig_iter = ldtk_intgrid_iter(ldtk_level, "Collisions");
+        while ((ig = ldtk_intgrid_next(&ig_iter))) {
+            BoxCollider* col = box_collider_new(ig->x, ig->y, ig->s, ig->s);
+            spgrid_insert(level->sparse_grid, col);
+        }
+
+        return level;
+    }
+
+    return NULL;
+}
+
+static int ysort(const void* a, const void* b) {
+    const Entity* e1 = *(Entity**)a;
+    const Entity* e2 = *(Entity**)b;
+    float p1         = e1->position.y + e1->sprite.sort_point;
+    float p2         = e2->position.y + e2->sprite.sort_point;
+
+    if (p1 > p2) return +1;
+    if (p1 < p2) return -1;
+
+    if (e1->position.x > e2->position.x) return +1;
+    if (e1->position.x < e2->position.x) return -1;
+
+    return ((uint64_t)e1 > (uint64_t)e2) ? +1 : -1;
 }
 
 void level_free(Level* this) {
@@ -33,58 +88,10 @@ void level_free(Level* this) {
     spgrid_free(this->sparse_grid);
     tilemap_free(this->tilemap);
     array_free(this->entities);
-}
-
-void level_load(Level* level, const char* path, const char* level_id) {
-    LDTK_Root* ldtk_root   = ldtk_load(path);
-    LDTK_Level* ldtk_level = ldtk_level_get(ldtk_root, level_id);
-    level->tilemap         = tilemap_from_ldtk(ldtk_level);
-
-    LDTK_Entity* ent;
-    LDTK_EntityIter ent_iter = ldtk_entity_iter(ldtk_level, "Entities");
-    while ((ent = ldtk_entity_next(&ent_iter))) {
-        int x              = ent->__world_x;
-        int y              = ent->__world_y;
-        const char* id     = ent->__identifier;
-        LDTK_Field* fields = ent->field_instances;
-        size_t len         = ent->field_instances_length;
-
-        lua_entity_create_notify(x, y, id, fields, len);
-    }
-
-    LDTK_IntGridValue* ig;
-    LDTK_IntGridIter ig_iter = ldtk_intgrid_iter(ldtk_level, "Collisions");
-    while ((ig = ldtk_intgrid_next(&ig_iter))) {
-        BoxCollider* col = box_collider_new(ig->x, ig->y, ig->s, ig->s);
-        spgrid_insert(level->sparse_grid, col);
-    }
-
-    ldtk_free(ldtk_root);
-}
-
-static int ysort(const void* a, const void* b) {
-    const Entity* e1 = *(Entity**)a;
-    const Entity* e2 = *(Entity**)b;
-    float p1         = e1->position.y + e1->sprite.sort_point;
-    float p2         = e2->position.y + e2->sprite.sort_point;
-    return p1 - p2;
+    ldtk_free(this->ldtk.root);
 }
 
 void level_update(Level* level) {
-    for (int i = 0; i < array_length(level->entities); i++) {
-        Entity* e = array_get(level->entities, i);
-        if (e->destroy) {
-            if (e->collider) {
-                spgrid_remove(level->sparse_grid, e->collider);
-            }
-
-            int last = array_length(level->entities) - 1;
-            array_set(level->entities, i, array_get(level->entities, last));
-            array_pop(level->entities);
-            entity_free(e);
-        }
-    }
-
     spgrid_resolve(level->sparse_grid, GetFrameTime());
     array_sort(level->entities, ysort);
 

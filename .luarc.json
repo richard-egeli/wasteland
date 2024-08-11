@@ -10,6 +10,7 @@
         "action_up",
         "action_released",
         "get_time",
-        "collision"
+        "collision",
+        "load_level"
     ]
 }

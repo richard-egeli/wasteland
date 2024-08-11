@@ -1,6 +1,5 @@
 require("scripts.entities")
-
-local player_speed = 100.0
+require("scripts.npc")
 
 ---@class Projectile
 ---@field entity Entity
@@ -23,10 +22,49 @@ end
 ---@type Projectile[]
 local projectiles = {}
 
+---@type NPC[]
+local npcs = {}
+
 ---@type Entity
 Player = nil
 
+---@type NPC
+Test = nil
+
+Level = load_level("assets/test.ldtk", "Level_0")
+
+Level:load_entities("Entities", function(x, y, name, ...)
+	local args = { ... }
+	local definition = Entity_Defs[name]
+
+	if definition ~= nil then
+		local entity = Level:spawn_entity(x, y, definition)
+		local entity_id = entity:get_id()
+		entity.name = name
+
+		Entities[entity_id] = entity
+		if name == "Player" then
+			Player = entity
+			Player.speed = 100.0
+		end
+
+		for i = 1, #args, 2 do
+			local id = args[i]
+			local value = args[i + 1]
+			if id ~= nil and value ~= nil then
+				print(id)
+				entity[id] = value
+			end
+		end
+
+		if name == "NPC" then
+			table.insert(npcs, NPC:new(entity))
+		end
+	end
+end)
+
 function update(delta_time)
+	local player_speed = Player.speed
 	if Player ~= nil then
 		if action_down("move_up") then
 			Player:move(0, -1.0 * player_speed * delta_time)
@@ -47,9 +85,13 @@ function update(delta_time)
 		if action_down("space") then
 			local x, y = Player:get_position()
 			local dx, dy = Player:get_mouse_direction()
-			local entity = create_entity(x, y, Entity_Defs["Bullet"])
+			local entity = Level:spawn_entity(x, y, Entity_Defs["Bullet"])
 			local proj = Projectile:new(entity, { x = -dx, y = -dy }, 300)
 			table.insert(projectiles, proj)
+		end
+
+		for _, npc in ipairs(npcs) do
+			npc:update(delta_time)
 		end
 	end
 
@@ -70,38 +112,11 @@ end
 ---@param e1 Entity
 ---@param e2 Entity
 function collision(e1, e2)
-	local entity = Entities[e1]
+	local ent1 = Entities[e1]
+	local ent2 = Entities[e2]
 
-	if entity["Test"] == "Teleport" then
-		print(entity["Point"])
-		local p = entity["Point"]
-		e2:set_position(p.x * 16, p.y * 16)
-	end
-	print(entity["Test"])
-end
-
-function on_entity_spawn(x, y, name, ...)
-	local args = { ... }
-	local def = Entity_Defs[name]
-
-	if def ~= nil then
-		local entity_id = create_entity(x, y, def)
-		Entities[entity_id] = {
-			id = entity_id,
-			name = name,
-		}
-
-		local entity = Entities[entity_id]
-		if name == "Player" then
-			Player = entity_id
-		end
-
-		for i = 1, #args, 2 do
-			local id = args[i]
-			local value = args[i + 1]
-			if id ~= nil and value ~= nil then
-				entity[id] = value
-			end
-		end
+	if ent1["Test"] == "Teleport" then
+		local p = ent1["Point"]
+		ent2:set_position(p.x * 16, p.y * 16)
 	end
 end

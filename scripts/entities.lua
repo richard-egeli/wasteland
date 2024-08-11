@@ -43,6 +43,35 @@ Entity_Defs["Bullet"] = {
 	},
 }
 
+Entity_Defs["NPC"] = {
+	sprite = {
+		texture = "assets/player.png",
+		cell_x = 0,
+		cell_y = 0,
+		cell_width = 14,
+		cell_height = 14,
+		grid_size = 14,
+		sort_point = 14,
+	},
+
+	box_collider = {
+		type = Collider.DYNAMIC,
+		mask = LayerMask.PLAYER + LayerMask.GROUND,
+		origin = {
+			x = 1,
+			y = 1,
+		},
+		position = {
+			x = 0,
+			y = 0,
+		},
+		size = {
+			x = 14,
+			y = 14,
+		},
+	},
+}
+
 Entity_Defs["Player"] = {
 	sprite = {
 		texture = "assets/player.png",
@@ -56,7 +85,7 @@ Entity_Defs["Player"] = {
 
 	box_collider = {
 		type = Collider.DYNAMIC,
-		mask = LayerMask.PLAYER | LayerMask.GROUND,
+		mask = LayerMask.PLAYER + LayerMask.GROUND,
 		origin = {
 			x = 0,
 			y = 0,
@@ -72,7 +101,7 @@ Entity_Defs["Player"] = {
 	},
 }
 
-Entity_Defs["tree_01"] = {
+Entity_Defs["Tree_01"] = {
 	sprite = {
 		texture = "assets/atlas.png",
 		cell_x = 464,
@@ -86,7 +115,6 @@ Entity_Defs["tree_01"] = {
 	box_collider = {
 		type = Collider.STATIC,
 		mask = LayerMask.GROUND,
-		trigger = true,
 		debug = false,
 		origin = {
 			x = 10,

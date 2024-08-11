@@ -8,6 +8,7 @@
 #include "action.h"
 #include "global.h"
 #include "lua_entity.h"
+#include "lua_level.h"
 
 static int lua_action_down(lua_State* L) {
     size_t length;
@@ -57,4 +58,5 @@ void lua_register_functions(lua_State* L) {
     lua_register(L, "get_mouse_world_position", lua_get_mouse_world_positon);
     lua_register(L, "get_time", lua_get_time);
     lua_entity_register(L);
+    lua_level_register(L);
 }

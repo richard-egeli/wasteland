@@ -1,6 +1,7 @@
 #include "collision/box_collider.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "collision/collision_defs.h"
@@ -80,7 +81,7 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
         // this is a temp fix for colliding with dynamic objects, and it barely
         // works
         if (b1->type == COLLIDER_TYPE_DYNAMIC &&
-            b1->type == COLLIDER_TYPE_DYNAMIC) {
+            b2->type == COLLIDER_TYPE_DYNAMIC) {
             Point v1 = b1->velocity;
             Point v2 = b2->velocity;
             float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);

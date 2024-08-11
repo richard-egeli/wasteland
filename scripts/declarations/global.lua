@@ -47,36 +47,10 @@ function get_time()
 	error("function implemented in C and should not be called in Lua")
 end
 
----@class Entity
----@field name string
-Entity = {}
-
---- Set the position directly
----@param x number the x coordinate
----@param y number the y coordinate
-function Entity:set_position(x, y)
-	error("function implemented in C and should not be called in Lua")
-end
-
----@return number x, number y position of the entity in coordinates
-function Entity:get_position()
-	error("function implemented in C and should not be called in Lua")
-end
-
---- Get the direction of the mouse compared to the entity position
----@return number x, number y a normalized direction vector relative to position
-function Entity:get_mouse_direction()
-	error("function implemented in C and should not be called in Lua")
-end
-
---- Move the entity by x,y
----@param x number
----@param y number
-function Entity:move(x, y)
-	error("function implemented in C and should not be called in Lua")
-end
-
---- Mark the entity for destruction
-function Entity:destroy()
+--- Load a level and make it active
+---@param path string the path of the ldtk file to load
+---@param level string the name of the level in the ldtk file
+---@return Level level
+function load_level(path, level)
 	error("function implemented in C and should not be called in Lua")
 end
