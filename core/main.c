@@ -1,6 +1,7 @@
 
 #include <assert.h>
 #include <complex.h>
+#include <enet/enet.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <luajit.h>
@@ -15,6 +16,7 @@
 #include "level.h"
 #include "lua_funcs.h"
 #include "texture.h"
+#include "ui/ui.h"
 
 static void move_camera_left(void) {
     global.camera.target.x -= 3.0;
@@ -51,6 +53,14 @@ static void lua_init(const char* file) {
     lua_pcall(global.state, 0, 0, 0);
 }
 
+static void setup_host(UI_Base* base, void* userdata) {
+    printf("Join Host\n");
+}
+
+static void setup_client(UI_Base* base, void* userdata) {
+    printf("Join Client\n");
+}
+
 int main(void) {
     InitWindow(1280, 720, "Temp Window");
     SetTargetFPS(60);
@@ -75,11 +85,31 @@ int main(void) {
 
     lua_init("scripts/main.lua");
 
+    UI_Base* ui_base        = (void*)ui_new(UI_TYPE_BASE);
+    UI_Button* ui_host      = (void*)ui_new(UI_TYPE_BUTTON);
+    UI_Button* ui_client    = (void*)ui_new(UI_TYPE_BUTTON);
+
+    ui_host->base.texture   = texture_load("assets/button.png");
+    ui_host->onclick        = setup_host;
+
+    ui_client->base.texture = texture_load("assets/button.png");
+    ui_client->onclick      = setup_client;
+    ui_client->base.y       = 64;
+
+    ui_addchild(ui_base, (void*)ui_host);
+    ui_addchild(ui_base, (void*)ui_client);
+
     while (!WindowShouldClose()) {
         if (IsKeyDown(KEY_UP)) move_camera_up();
         if (IsKeyDown(KEY_DOWN)) move_camera_down();
         if (IsKeyDown(KEY_LEFT)) move_camera_left();
         if (IsKeyDown(KEY_RIGHT)) move_camera_right();
+
+        if (IsMouseButtonPressed(0)) {
+            float x = GetMouseX() / global.camera.zoom;
+            float y = GetMouseY() / global.camera.zoom;
+            ui_onclick(ui_base, x, y);
+        }
 
         lua_getglobal(global.state, "update");
         if (lua_isfunction(global.state, -1)) {
@@ -111,6 +141,8 @@ int main(void) {
         Rectangle dst = {0, 0, GetScreenWidth(), GetScreenHeight()};
         DrawTexturePro(rt.texture, src, dst, (Vector2){0}, 0, WHITE);
         DrawFPS(0, 0);
+
+        ui_draw(ui_base);
 
         EndMode2D();
         EndDrawing();

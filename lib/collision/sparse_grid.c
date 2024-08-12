@@ -10,6 +10,11 @@
 #include "collision/collision_defs.h"
 #include "hashmap/hashmap.h"
 
+typedef enum SparseEventType {
+    SPARSE_EVENT_TYPE_INSERT,
+    SPARSE_EVENT_TYPE_REMOVE,
+} SparseEventType;
+
 typedef struct {
     int x_start;
     int y_start;
@@ -22,20 +27,27 @@ typedef struct DynamicCollider {
     BoxCollider* collider;
 } DynamicCollider;
 
+typedef struct SparseEvent {
+    SparseEventType type;
+    const BoxCollider* collider;
+    struct SparseEvent* next;
+} SparseEvent;
+
 typedef struct SparseGridIter {
     int index;
     Array* array;
     HashMapIter* hmap_iter;
 } SparseGridIter;
 
-typedef struct SparseGrid {
-    HashMap* grid_map;
-    Array* weak_dyn_ref;
-} SparseGrid;
-
 typedef struct SparseObject {
     void* value;
 } SparseObject;
+
+typedef struct SparseGrid {
+    HashMap* grid_map;
+    Array* weak_dyn_ref;
+    SparseEvent* events;
+} SparseGrid;
 
 typedef struct SparseGridRegionIter {
     int index;
@@ -53,8 +65,8 @@ static inline SparseRegion spgrid_region(const Rect r) {
 }
 
 static inline bool spgrid_region_equal(SparseRegion r1, SparseRegion r2) {
-    return r1.x_start == r2.x_start && r1.x_end == r2.x_end &&
-           r1.y_start == r2.y_start && r1.y_end == r2.y_end;
+    return r1.x_start == r2.x_start && r1.x_end == r2.x_end && r1.y_start == r2.y_start &&
+           r1.y_end == r2.y_end;
 }
 
 static SparseGridRegionIter* spgrid_region_iter(SparseGrid* this, Rect b) {
@@ -116,46 +128,9 @@ static Array* sparse_grid_region_get(SparseGrid* this, int x, int y) {
     return array;
 }
 
-void spgrid_insert(SparseGrid* this, BoxCollider* box) {
-    SparseRegion r = spgrid_region(box_collider_rect(box));
-
-    char grid_key[64];
-    for (int y = r.y_start; y <= r.y_end; y++) {
-        for (int x = r.x_start; x <= r.x_end; x++) {
-            Array* array      = sparse_grid_region_get(this, x, y);
-            SparseObject* obj = malloc(sizeof(SparseObject));
-            obj->value        = box;
-            array_push(array, obj);
-        }
-    }
-
-    // TODO: naive approach currently, improve performance on insert
-    if (box->type == COLLIDER_TYPE_DYNAMIC) {
-        bool has = false;
-        for (int i = 0; i < array_length(this->weak_dyn_ref); i++) {
-            DynamicCollider* dyn = array_get(this->weak_dyn_ref, i);
-            if (dyn->collider == box) {
-                has = true;
-                break;
-            }
-        }
-
-        if (!has) {
-            DynamicCollider* dyn = malloc(sizeof(*dyn));
-            if (dyn == NULL) {
-                perror("failed to allocate dyn collider on sparse grid insert");
-                return;
-            }
-
-            dyn->region   = r;
-            dyn->collider = box;
-            array_push(this->weak_dyn_ref, dyn);
-        }
-    }
-}
-
-void spgrid_remove(SparseGrid* this, const BoxCollider* box) {
-    SparseRegion r = spgrid_region(box_collider_rect(box));
+static void spgrid_handle_event_remove(SparseGrid* this, SparseEvent* event) {
+    const BoxCollider* box = event->collider;
+    SparseRegion r         = spgrid_region(box_collider_rect(box));
 
     for (int y = r.y_start; y <= r.y_end; y++) {
         for (int x = r.x_start; x <= r.x_end; x++) {
@@ -189,6 +164,87 @@ void spgrid_remove(SparseGrid* this, const BoxCollider* box) {
     }
 }
 
+static void spgrid_handle_event_insert(SparseGrid* this, SparseEvent* event) {
+    const BoxCollider* box = event->collider;
+    SparseRegion r         = spgrid_region(box_collider_rect(box));
+
+    char grid_key[64];
+    for (int y = r.y_start; y <= r.y_end; y++) {
+        for (int x = r.x_start; x <= r.x_end; x++) {
+            Array* array      = sparse_grid_region_get(this, x, y);
+            SparseObject* obj = malloc(sizeof(SparseObject));
+            obj->value        = box;
+            array_push(array, obj);
+        }
+    }
+
+    // TODO: naive approach currently, improve performance on insert
+    if (box->type == COLLIDER_TYPE_DYNAMIC) {
+        bool has = false;
+        for (int i = 0; i < array_length(this->weak_dyn_ref); i++) {
+            DynamicCollider* dyn = array_get(this->weak_dyn_ref, i);
+            if (dyn->collider == box) {
+                has = true;
+                break;
+            }
+        }
+
+        if (!has) {
+            DynamicCollider* dyn = malloc(sizeof(*dyn));
+            if (dyn == NULL) {
+                perror(
+                    "failed to allocate dyn collider on sparse grid "
+                    "insert");
+                return;
+            }
+
+            dyn->region   = r;
+            dyn->collider = box;
+            array_push(this->weak_dyn_ref, dyn);
+        }
+    }
+}
+
+static void spgrid_handle_events(SparseGrid* this) {
+    SparseEvent* event = this->events;
+    while (event != NULL) {
+        SparseEvent* temp = event;
+        switch (event->type) {
+            case SPARSE_EVENT_TYPE_INSERT:
+                spgrid_handle_event_insert(this, event);
+                break;
+            case SPARSE_EVENT_TYPE_REMOVE:
+                spgrid_handle_event_remove(this, event);
+                break;
+        }
+
+        event = event->next;
+        free(temp);
+    }
+
+    this->events = NULL;
+}
+
+void spgrid_insert(SparseGrid* this, BoxCollider* box) {
+    SparseEvent* event = malloc(sizeof(*event));
+    if (event != NULL) {
+        event->type     = SPARSE_EVENT_TYPE_INSERT;
+        event->collider = box;
+        event->next     = this->events;
+        this->events    = event;
+    }
+}
+
+void spgrid_remove(SparseGrid* this, const BoxCollider* box) {
+    SparseEvent* event = malloc(sizeof(*event));
+    if (event != NULL) {
+        event->type     = SPARSE_EVENT_TYPE_REMOVE;
+        event->collider = box;
+        event->next     = this->events;
+        this->events    = event;
+    }
+}
+
 void spgrid_resolve(SparseGrid* this, float delta) {
     size_t length = array_length(this->weak_dyn_ref);
     for (int i = 0; i < length; i++) {
@@ -214,7 +270,9 @@ void spgrid_resolve(SparseGrid* this, float delta) {
     }
 
     for (int i = 0; i < length; i++) {
-        DynamicCollider* col       = array_get(this->weak_dyn_ref, i);
+        DynamicCollider* col = array_get(this->weak_dyn_ref, i);
+        if (col == NULL) continue;
+
         BoxCollider* b1            = col->collider;
         Rect bounds                = box_collider_bounds(b1);
         SparseGridRegionIter* iter = spgrid_region_iter(this, bounds);
@@ -257,6 +315,8 @@ void spgrid_resolve(SparseGrid* this, float delta) {
             spgrid_insert(this, b1);
         }
     }
+
+    spgrid_handle_events(this);
 }
 
 SparseGridIter* spgrid_iter(SparseGrid* this) {
@@ -344,6 +404,7 @@ void spgrid_free(SparseGrid* this) {
 
 SparseGrid* spgrid_new(void) {
     SparseGrid* sp = malloc(sizeof(*sp));
+
     if (sp == NULL) {
         perror("failed to create new spatial grid");
         return NULL;
@@ -364,5 +425,6 @@ SparseGrid* spgrid_new(void) {
         return NULL;
     }
 
+    sp->events = NULL;
     return sp;
 }

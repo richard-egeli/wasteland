@@ -8,7 +8,6 @@
 #include "lua.h"
 #include "lua_entity.h"
 #include "lua_helper.h"
-#include "lualib.h"
 
 #define META_TABLE "LevelObjectMetaTable"
 

@@ -15,6 +15,7 @@ typedef struct BoxCollider {
     Point size;
     bool debug;
     bool trigger;
+    bool enabled;
     ColliderType type;
     void (*on_collision)(struct BoxCollider* this, struct BoxCollider* target);
     struct {

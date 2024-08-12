@@ -1,7 +1,6 @@
 #include "collision/box_collider.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "collision/collision_defs.h"
@@ -37,9 +36,13 @@ inline Rect box_collider_bounds(const BoxCollider *col) {
 }
 
 bool box_collider_overlap(BoxCollider *b1, BoxCollider *b2) {
-    const Rect r1 = box_collider_bounds(b1);
-    const Rect r2 = box_collider_rect(b2);
-    return box_rect_overlap(r1, r2);
+    if (b1->enabled && b2->enabled) {
+        const Rect r1 = box_collider_bounds(b1);
+        const Rect r2 = box_collider_rect(b2);
+        return box_rect_overlap(r1, r2);
+    }
+
+    return false;
 }
 
 static bool box_collider_slope(BoxCollider *b1, BoxCollider *b2) {
@@ -156,5 +159,6 @@ BoxCollider *box_collider_new(float x, float y, float width, float height) {
     col->position      = (Point){x, y};
     col->type          = COLLIDER_TYPE_STATIC;
     col->gravity.force = 0.98f;
+    col->enabled       = true;
     return col;
 }

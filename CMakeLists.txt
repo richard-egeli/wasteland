@@ -52,6 +52,18 @@ if (NOT Lua_FOUND)
   FetchContent_MakeAvailable(lua)
 endif()
 
+find_package(enet QUIET)
+if(NOT enet_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+      enet
+      GIT_REPOSITORY https://github.com/lsalzman/enet.git
+      GIT_TAG master
+    )
+
+  FetchContent_MakeAvailable(enet)
+endif()
+
 set(LUAJIT_LIBRARIES /usr/local/lib/libluajit-5.1.a)
 set(LUAJIT_INCLUDE_DIR /usr/local/include/luajit-2.1)
 
@@ -59,6 +71,7 @@ add_subdirectory(lib/collision)
 add_subdirectory(lib/hashmap)
 add_subdirectory(lib/array)
 add_subdirectory(lib/ldtk)
+add_subdirectory(lib/ui)
 
 message(STATUS ${LUA_INCLUDE_DIR})
 
@@ -76,20 +89,25 @@ add_executable(${PROJECT_NAME}
   core/src/lua_helper.c
 )
 
+message(STATUS ${enet_SOURCE_DIR})
+
 target_include_directories(${PROJECT_NAME} PUBLIC 
   core/include 
-  # ${LUA_INCLUDE_DIR} 
   ${LUAJIT_INCLUDE_DIR}
+  ${enet_SOURCE_DIR}/include
 )
+
 target_link_libraries(${PROJECT_NAME} 
+  ${LUAJIT_LIBRARIES}
   raylib 
   collision 
   hashmap 
   array 
   ldtk 
-  # ${LUA_LIBRARY} 
-  ${LUAJIT_LIBRARIES}
+  enet
+  ui
 )
+
 
 
 if (${BUILD_UNIT_TESTS})

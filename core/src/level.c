@@ -103,6 +103,7 @@ void level_update(Level* level) {
 
     for (int i = 0; i < array_length(level->entities); i++) {
         Entity* ent = array_get(level->entities, i);
+        if (ent->destroyed) continue;
 
         if (ent != NULL) {
             if (ent->collider != NULL) {

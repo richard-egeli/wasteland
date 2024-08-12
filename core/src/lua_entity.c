@@ -1,5 +1,6 @@
 #include "lua_entity.h"
 
+#include <assert.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -43,34 +44,51 @@ typedef struct EntityObject {
 
 static int lua_entity_move(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
-    Entity* entity       = (void*)object->entity;
-    float x              = luaL_checknumber(L, 2);
-    float y              = luaL_checknumber(L, 3);
-    if (entity->collider) {
-        entity->collider->velocity.x += x;
-        entity->collider->velocity.y += y;
-    } else {
-        entity->position.x += x;
-        entity->position.y += y;
+    Entity* entity       = object->entity;
+
+    if (entity != NULL) {
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        if (entity->collider) {
+            entity->collider->velocity.x += x;
+            entity->collider->velocity.y += y;
+        } else {
+            entity->position.x += x;
+            entity->position.y += y;
+        }
     }
+
     return 0;
 }
 
 static int lua_entity_set_position(lua_State* L) {
-    EntityObject* object         = lua_touserdata(L, 1);
-    Entity* entity               = (void*)object->entity;
-    float x                      = luaL_checknumber(L, 2);
-    float y                      = luaL_checknumber(L, 3);
-    entity->collider->position.x = x;
-    entity->collider->position.y = y;
+    EntityObject* object = lua_touserdata(L, 1);
+    Entity* entity       = (void*)object->entity;
+    if (entity != NULL) {
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+
+        if (entity->collider) {
+            entity->collider->position.x = x;
+            entity->collider->position.y = y;
+        } else {
+            entity->position.x = x;
+            entity->position.y = y;
+        }
+    }
+
     return 0;
 }
 
 static int lua_entity_get_position(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
     Entity* entity       = object->entity;
-    lua_pushnumber(L, entity->position.x);
-    lua_pushnumber(L, entity->position.y);
+
+    if (entity != NULL) {
+        lua_pushnumber(L, entity->position.x);
+        lua_pushnumber(L, entity->position.y);
+    }
+
     return 2;
 }
 
@@ -82,19 +100,24 @@ static int lua_entity_get_id(lua_State* L) {
 
 static int lua_entity_mouse_direction(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
-    Entity* entity       = (void*)object->entity;
+    Entity* entity       = object->entity;
 
-    Vector2 mouse_pos    = GetMousePosition();
-    mouse_pos.x /= 2;
-    mouse_pos.y /= 2;
+    if (entity != NULL) {
+        Vector2 mouse_pos = GetMousePosition();
+        mouse_pos.x /= 2;
+        mouse_pos.y /= 2;
 
-    float x  = entity->position.x - mouse_pos.x;
-    float y  = entity->position.y - mouse_pos.y;
-    float m  = sqrtf(x * x + y * y);
-    float nx = x / m;
-    float ny = y / m;
-    lua_pushnumber(L, nx);
-    lua_pushnumber(L, ny);
+        float x  = entity->position.x - mouse_pos.x;
+        float y  = entity->position.y - mouse_pos.y;
+        float m  = sqrtf(x * x + y * y);
+        float nx = x / m;
+        float ny = y / m;
+        lua_pushnumber(L, nx);
+        lua_pushnumber(L, ny);
+    } else {
+        lua_pushnumber(L, 0);
+        lua_pushnumber(L, 0);
+    }
     return 2;
 }
 
@@ -258,7 +281,18 @@ static int lua_entity_gc(lua_State* L) {
 }
 
 static int lua_entity_destroy(lua_State* L) {
-    return lua_entity_gc(L);
+    EntityObject* object = lua_touserdata(L, 1);
+
+    if (object && object->entity) {
+        Entity* entity    = object->entity;
+        entity->destroyed = true;
+
+        if (entity->collider) {
+            entity->collider->enabled = false;
+        }
+    }
+
+    return 0;
 }
 
 void lua_entity_create(Level* level, lua_State* L) {
