@@ -45,13 +45,14 @@ typedef struct EntityObject {
 static int lua_entity_move(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
     Entity* entity       = object->entity;
+    Level* level         = object->level;
 
     if (entity != NULL) {
         float x = luaL_checknumber(L, 2);
         float y = luaL_checknumber(L, 3);
+
         if (entity->collider) {
-            entity->collider->velocity.x += x;
-            entity->collider->velocity.y += y;
+            spgrid_collider_move(level->sparse_grid, entity->collider, x, y);
         } else {
             entity->position.x += x;
             entity->position.y += y;
@@ -63,14 +64,14 @@ static int lua_entity_move(lua_State* L) {
 
 static int lua_entity_set_position(lua_State* L) {
     EntityObject* object = lua_touserdata(L, 1);
-    Entity* entity       = (void*)object->entity;
+    Entity* entity       = object->entity;
+    Level* level         = object->level;
     if (entity != NULL) {
         float x = luaL_checknumber(L, 2);
         float y = luaL_checknumber(L, 3);
 
         if (entity->collider) {
-            entity->collider->position.x = x;
-            entity->collider->position.y = y;
+            spgrid_collider_move(level->sparse_grid, entity->collider, x, y);
         } else {
             entity->position.x = x;
             entity->position.y = y;
@@ -285,10 +286,12 @@ static int lua_entity_destroy(lua_State* L) {
 
     if (object && object->entity) {
         Entity* entity    = object->entity;
+        Level* level      = object->level;
         entity->destroyed = true;
 
         if (entity->collider) {
-            entity->collider->enabled = false;
+            spgrid_remove(level->sparse_grid, entity->collider);
+            entity->collider = 0;
         }
     }
 
@@ -303,7 +306,7 @@ void lua_entity_create(Level* level, lua_State* L) {
     object->entity       = entity;
     entity->position.x   = luaL_checknumber(L, 2);
     entity->position.y   = luaL_checknumber(L, 3);
-    entity->collider     = NULL;
+    entity->collider     = 0;
 
     lua_newtable(L);     // Create a new table for this entity's environment
     lua_setfenv(L, -2);  // Set this table as the environment for the userdata
@@ -346,21 +349,26 @@ void lua_entity_create(Level* level, lua_State* L) {
 
         x += entity->position.x;
         y += entity->position.y;
-        entity->collider               = box_collider_new(x, y, w, h);
-        entity->collider->type         = GET_INT(L, "type");
-        entity->collider->mask         = GET_INT(L, "mask");
-        entity->collider->debug        = GET_BOOL(L, "debug");
-        entity->collider->trigger      = GET_BOOL(L, "trigger");
-        entity->collider->id           = (uint64_t)entity;
-        entity->collider->on_collision = lua_collision_notify;
-        spgrid_insert(level->sparse_grid, entity->collider);
+        BoxCollider* collider  = box_collider_new(x, y, w, h);
+        collider               = box_collider_new(x, y, w, h);
+        collider->type         = GET_INT(L, "type");
+        collider->mask         = GET_INT(L, "mask");
+        collider->debug        = GET_BOOL(L, "debug");
+        collider->trigger      = GET_BOOL(L, "trigger");
+        collider->id           = (uint64_t)entity;
+        collider->on_collision = lua_collision_notify;
 
         lua_getfield(L, -1, "origin");
         if (!lua_isnil(L, -1)) {
-            entity->collider->origin.x = GET_INT(L, "x");
-            entity->collider->origin.y = GET_INT(L, "y");
+            collider->origin.x = GET_INT(L, "x");
+            collider->origin.y = GET_INT(L, "y");
         }
 
+        entity->collider = spgrid_insert(level->sparse_grid, collider);
+
+        if (collider->mask == 6) {
+            printf("ID OF PLAYER %llu\n", entity->collider);
+        }
         lua_pop(L, 1);
     }
     lua_pop(L, 1);
@@ -431,6 +439,4 @@ void lua_entity_register(lua_State* L) {
     lua_setfield(L, -2, "destroy");
 
     lua_pop(L, 1);
-
-    // lua_register(L, "create_entity", lua_entity_create);
 }

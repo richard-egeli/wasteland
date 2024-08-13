@@ -106,9 +106,10 @@ void level_update(Level* level) {
         if (ent->destroyed) continue;
 
         if (ent != NULL) {
-            if (ent->collider != NULL) {
-                ent->position.x = ent->collider->position.x;
-                ent->position.y = ent->collider->position.y;
+            if (ent->collider != 0) {
+                Point position  = spgrid_collider_position(level->sparse_grid, ent->collider);
+                ent->position.x = position.x;
+                ent->position.y = position.y;
             }
 
             Vector2 org   = {0};
@@ -129,10 +130,10 @@ void level_update(Level* level) {
             DrawTexturePro(ent->sprite.texture, src, dst, org, 0, WHITE);
 
 #ifndef NDEBUG
-            if (ent->collider && ent->collider->debug) {
-                Rect r = box_collider_rect(ent->collider);
-                DrawRectangleLines(r.x, r.y, r.w, r.h, GREEN);
-            }
+            /*if (ent->collider && ent->collider->debug) {*/
+            /*    Rect r = box_collider_rect(ent->collider);*/
+            /*    DrawRectangleLines(r.x, r.y, r.w, r.h, GREEN);*/
+            /*}*/
 #endif
         }
     }

@@ -85,7 +85,7 @@ Entity_Defs["Player"] = {
 
 	box_collider = {
 		type = Collider.DYNAMIC,
-		mask = LayerMask.NPC,
+		mask = LayerMask.NPC + LayerMask.PLAYER,
 		trigger = true,
 		origin = {
 			x = 0,

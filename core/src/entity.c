@@ -3,24 +3,17 @@
 #include <stdlib.h>
 
 #include "collision/box_collider.h"
+#include "collision/sparse_grid.h"
 
-static void entity_tree_01(void) {
-}
-
-void entity_add_collider(Entity* this, int x, int y, int w, int h) {
-    BoxCollider* col = box_collider_new(x, y, w, h);
-    if (this->collider != NULL) {
-        free(this->collider);
-    }
-
-    this->collider = col;
+void entity_add_collider(SparseGrid* world, Entity* this, BoxCollider* collider) {
+    this->collider = spgrid_insert(world, collider);
 }
 
 void entity_free(Entity* this) {
-    if (this->collider) {
-        box_collider_free(this->collider);
-        this->collider = NULL;
-    }
+    /*if (this->collider) {*/
+    /*    box_collider_free(this->collider);*/
+    /*    this->collider = NULL;*/
+    /*}*/
 
     free(this);
 }
