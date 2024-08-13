@@ -39,7 +39,7 @@ typedef struct SparseGrid {
 static Array* sparse_grid_region_get(SparseGrid* this, int x, int y) {
     char grid_key[48];
     Array* array = NULL;
-    uint32_t len = sprintf(grid_key, "%d,%d", x, y);
+    uint32_t len = snprintf(grid_key, sizeof(grid_key), "%d,%d", x, y);
     if (!hmap_get(this->grid_map, grid_key, len, (void**)&array)) {
         array = array_new();
         if (!hmap_put(this->grid_map, grid_key, len, array)) {
@@ -54,7 +54,7 @@ static Array* sparse_grid_region_get(SparseGrid* this, int x, int y) {
 
 static void spgrid_handle_event_remove(SparseGrid* this, SparseEvent* event) {
     SparseObject* obj = event->object;
-    Region region     = sparse_object_region_get(obj, SPARSE_GRID_SIZE);
+    Region region     = sparse_object_region_get(obj);
 
     for (int y = region.ymin; y <= region.ymax; y++) {
         for (int x = region.xmin; x <= region.xmax; x++) {
@@ -88,7 +88,7 @@ static void spgrid_handle_event_remove(SparseGrid* this, SparseEvent* event) {
 
 static void spgrid_handle_event_insert(SparseGrid* this, SparseEvent* event) {
     SparseObject* obj = event->object;
-    Region region     = sparse_object_region_get(obj, SPARSE_GRID_SIZE);
+    Region region     = sparse_object_region_get(obj);
 
     for (int y = region.ymin; y <= region.ymax; y++) {
         for (int x = region.xmin; x <= region.xmax; x++) {
@@ -179,6 +179,14 @@ Point spgrid_collider_position(SparseGrid* this, ColliderID id) {
     };
 }
 
+void spgrid_collider_set_position(SparseGrid* this, ColliderID id, int x, int y) {
+    SparseObject* object = this->id_lookup[id];
+    if (object != NULL && object->collider != NULL) {
+        object->collider->position.x = x;
+        object->collider->position.y = y;
+    }
+}
+
 void spgrid_collider_move(SparseGrid* this, ColliderID id, float x, float y) {
     SparseObject* object = this->id_lookup[id];
     if (object != NULL && object->collider != NULL) {
@@ -216,15 +224,24 @@ void spgrid_resolve(SparseGrid* this, float delta) {
         SparseObject* obj = array_get(this->weak_dyn_ref, i);
         BoxCollider* b1   = obj->collider;
 
-        Region region     = sparse_object_region_get(obj, SPARSE_GRID_SIZE);
+        Region region     = sparse_object_region_get(obj);
         for (int y = region.ymin; y <= region.ymax; y++) {
             for (int x = region.xmin; x <= region.xmax; x++) {
                 Array* array = sparse_grid_region_get(this, x, y);
 
+                // solve all X axis
                 for (int i = 0; i < array_length(array); i++) {
                     SparseObject* o2 = array_get(array, i);
                     if (obj->collider != o2->collider) {
-                        box_collider_resolve(obj->collider, o2->collider);
+                        box_collider_resolve_x(obj->collider, o2->collider);
+                    }
+                }
+
+                // solve all Y axis
+                for (int i = 0; i < array_length(array); i++) {
+                    SparseObject* o2 = array_get(array, i);
+                    if (obj->collider != o2->collider) {
+                        box_collider_resolve_y(obj->collider, o2->collider);
                     }
                 }
             }
@@ -234,7 +251,7 @@ void spgrid_resolve(SparseGrid* this, float delta) {
         sparse_object_aabb_update(obj);
 
         if (sparse_object_region_moved(obj, SPARSE_GRID_SIZE)) {
-            Region region = sparse_object_region_get(obj, SPARSE_GRID_SIZE);
+            Region region = sparse_object_region_get(obj);
             for (int y = region.ymin; y <= region.ymax; y++) {
                 for (int x = region.xmin; x <= region.xmax; x++) {
                     Array* array = sparse_grid_region_get(this, x, y);
@@ -252,7 +269,7 @@ void spgrid_resolve(SparseGrid* this, float delta) {
             }
 
             sparse_object_region_update(obj, SPARSE_GRID_SIZE);
-            region = sparse_object_region_get(obj, SPARSE_GRID_SIZE);
+            region = sparse_object_region_get(obj);
             for (int y = region.ymin; y <= region.ymax; y++) {
                 for (int x = region.xmin; x <= region.xmax; x++) {
                     Array* array = sparse_grid_region_get(this, x, y);

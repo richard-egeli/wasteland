@@ -37,6 +37,10 @@ Rect box_collider_bounds(const BoxCollider* col);
 
 bool box_collider_overlap(BoxCollider* b1, BoxCollider* b2);
 
+void box_collider_resolve_y(BoxCollider* p1, BoxCollider* p2);
+
+void box_collider_resolve_x(BoxCollider* p1, BoxCollider* p2);
+
 void box_collider_resolve(BoxCollider* b1, BoxCollider* b2);
 
 void box_collider_update(BoxCollider* collider);

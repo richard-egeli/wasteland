@@ -29,13 +29,16 @@ local collision_events = {}
 ---@type Entity[]
 local weak_entity_table = setmetatable({}, { __mode = "v" })
 
+---@type Entity[]
+local world_entity_table = {}
+
 ---@type Entity
 Player = nil
 
 ---@type NPC
 Test = nil
 
-Level = load_level("assets/test.ldtk", "Level_1")
+Level = load_level("assets/test.ldtk", "Level_0")
 
 Level:load_entities("Entities", function(x, y, name, ...)
 	local args = { ... }
@@ -56,14 +59,16 @@ Level:load_entities("Entities", function(x, y, name, ...)
 		if name == "Player" then
 			Player = entity
 			Player.speed = 100.0
-			print(x, y)
+			return
 		end
 
 		if name == "NPC" then
 			table.insert(npcs, NPC:new(entity))
+			weak_entity_table[entity:get_id()] = entity
+			return
 		end
 
-		weak_entity_table[entity:get_id()] = entity
+		world_entity_table[entity:get_id()] = entity
 	end
 end)
 
@@ -131,7 +136,7 @@ function update(delta_time)
 		end
 
 		for _, npc in ipairs(npcs) do
-			npc:update(delta_time, Player)
+			npc:follow_grid(delta_time)
 		end
 	end
 
@@ -148,7 +153,7 @@ function update(delta_time)
 		end
 	end
 
-	spawn_enemy()
+	-- spawn_enemy()
 	solve_events()
 end
 

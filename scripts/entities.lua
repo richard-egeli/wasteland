@@ -48,26 +48,26 @@ Entity_Defs["NPC"] = {
 		texture = "assets/player.png",
 		cell_x = 0,
 		cell_y = 0,
-		cell_width = 14,
-		cell_height = 14,
-		grid_size = 14,
-		sort_point = 14,
+		cell_width = 16,
+		cell_height = 16,
+		grid_size = 16,
+		sort_point = 16,
 	},
 
 	box_collider = {
 		type = Collider.DYNAMIC,
 		mask = LayerMask.GROUND + LayerMask.PROJECTILE + LayerMask.NPC,
 		origin = {
-			x = 1,
-			y = 1,
+			x = 0,
+			y = 0,
 		},
 		position = {
 			x = 0,
 			y = 0,
 		},
 		size = {
-			x = 14,
-			y = 14,
+			x = 16,
+			y = 16,
 		},
 	},
 }
@@ -77,16 +77,16 @@ Entity_Defs["Player"] = {
 		texture = "assets/player.png",
 		cell_x = 0,
 		cell_y = 0,
-		cell_width = 14,
-		cell_height = 14,
-		grid_size = 14,
-		sort_point = 14,
+		cell_width = 16,
+		cell_height = 16,
+		grid_size = 16,
+		sort_point = 16,
 	},
 
 	box_collider = {
 		type = Collider.DYNAMIC,
-		mask = LayerMask.NPC + LayerMask.PLAYER,
-		trigger = true,
+		mask = LayerMask.GROUND + LayerMask.PLAYER,
+		trigger = false,
 		origin = {
 			x = 0,
 			y = 0,
@@ -96,8 +96,8 @@ Entity_Defs["Player"] = {
 			y = 0,
 		},
 		size = {
-			x = 14,
-			y = 14,
+			x = 16,
+			y = 16,
 		},
 	},
 }

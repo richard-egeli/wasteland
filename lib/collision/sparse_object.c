@@ -1,5 +1,6 @@
 #include "collision/sparse_object.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "collision/box_collider.h"
@@ -21,17 +22,17 @@ bool sparse_object_aabb_overlap(const SparseObject* s1, const SparseObject* s2) 
              s1->aabb.ymin > s2->aabb.ymax || s1->aabb.ymax < s2->aabb.ymin);
 }
 
-Region sparse_object_region_get(const SparseObject* this, size_t region_size) {
+Region sparse_object_region_get(const SparseObject* this) {
     return this->region;
 }
 
-bool sparse_object_region_moved(const SparseObject* this, size_t region_size) {
+bool sparse_object_region_moved(const SparseObject* this, int region_size) {
     AABB current;
     AABB original          = this->aabb;
     const BoxCollider* box = this->collider;
 
     original.xmin /= region_size;
-    original.ymax /= region_size;
+    original.ymin /= region_size;
     original.xmax /= region_size;
     original.ymax /= region_size;
 
@@ -44,18 +45,18 @@ bool sparse_object_region_moved(const SparseObject* this, size_t region_size) {
              original.xmax == current.xmax && original.ymax == current.ymax);
 }
 
-void sparse_object_region_update(SparseObject* this, size_t region_size) {
-    this->region.xmin = (int)(this->aabb.xmin / region_size);
-    this->region.xmax = (int)(this->aabb.xmax / region_size);
-    this->region.ymin = (int)(this->aabb.ymin / region_size);
-    this->region.ymax = (int)(this->aabb.ymax / region_size);
+void sparse_object_region_update(SparseObject* this, int region_size) {
+    this->region.xmin = this->aabb.xmin / region_size;
+    this->region.xmax = this->aabb.xmax / region_size;
+    this->region.ymin = this->aabb.ymin / region_size;
+    this->region.ymax = this->aabb.ymax / region_size;
 }
 
 void sparse_object_free(SparseObject* this) {
     free(this);
 }
 
-SparseObject* sparse_object_new(BoxCollider* collider, size_t region_size) {
+SparseObject* sparse_object_new(BoxCollider* collider, int region_size) {
     SparseObject* object = malloc(sizeof(*object));
     if (object != NULL) {
         object->collider = collider;

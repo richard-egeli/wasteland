@@ -6,7 +6,7 @@
 #include "collision/collision_defs.h"
 
 #ifndef SPARSE_GRID_SIZE
-#define SPARSE_GRID_SIZE 64
+#define SPARSE_GRID_SIZE 160
 #endif
 
 typedef struct SparseObject SparseObject;
@@ -20,6 +20,8 @@ typedef struct SparseGridIter SparseGridIter;
 typedef uint64_t ColliderID;
 
 Point spgrid_collider_position(SparseGrid* this, ColliderID id);
+
+void spgrid_collider_set_position(SparseGrid* this, ColliderID id, int x, int y);
 
 void spgrid_collider_move(SparseGrid* this, ColliderID id, float x, float y);
 

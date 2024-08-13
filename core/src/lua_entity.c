@@ -71,7 +71,7 @@ static int lua_entity_set_position(lua_State* L) {
         float y = luaL_checknumber(L, 3);
 
         if (entity->collider) {
-            spgrid_collider_move(level->sparse_grid, entity->collider, x, y);
+            spgrid_collider_set_position(level->sparse_grid, entity->collider, (int)x, (int)y);
         } else {
             entity->position.x = x;
             entity->position.y = y;
