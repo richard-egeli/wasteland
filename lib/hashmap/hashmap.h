@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct HashMap HashMap;
 
@@ -16,13 +17,13 @@ HashMapIter* hmap_iter(const HashMap* this);
 
 size_t hmap_capacity(const HashMap* this);
 
-bool hmap_has(const HashMap* this, const char* key);
+bool hmap_has(const HashMap* this, const char* key, uint32_t len);
 
-bool hmap_put(HashMap* this, const char* key, void* value);
+bool hmap_put(HashMap* this, const char* key, uint32_t len, void* value);
 
-bool hmap_take(HashMap* this, const char* key, void** value);
+bool hmap_take(HashMap* this, const char* key, uint32_t len, void** value);
 
-bool hmap_get(const HashMap* this, const char* key, void** value);
+bool hmap_get(const HashMap* this, const char* key, uint32_t len, void** value);
 
 void hmap_free(HashMap* this);
 

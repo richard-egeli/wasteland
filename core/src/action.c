@@ -4,6 +4,7 @@
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "global.h"
 #include "hashmap/hashmap.h"
@@ -16,7 +17,7 @@ void action_register(const char* key, int keycode) {
     }
 
     Action* action = NULL;
-    if (hmap_get(map, key, (void**)&action)) {
+    if (hmap_get(map, key, strlen(key), (void**)&action)) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             if (action->keys_bound[i] == 0) {
@@ -31,7 +32,7 @@ void action_register(const char* key, int keycode) {
         }
 
         action->keys_bound[0] = toupper(keycode);
-        if (!hmap_put(map, key, action)) {
+        if (!hmap_put(map, key, strlen(key), action)) {
             perror("failed to put action in hashmap");
             free(action);
         }
@@ -41,7 +42,7 @@ void action_register(const char* key, int keycode) {
 bool action_up(const char* key) {
     Action* action = NULL;
 
-    if (hmap_get(global.actions, key, (void**)&action)) {
+    if (hmap_get(global.actions, key, strlen(key), (void**)&action)) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];
@@ -59,7 +60,7 @@ bool action_up(const char* key) {
 bool action_down(const char* key) {
     Action* action = NULL;
 
-    if (hmap_get(global.actions, key, (void**)&action)) {
+    if (hmap_get(global.actions, key, strlen(key), (void**)&action)) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];
@@ -77,7 +78,7 @@ bool action_down(const char* key) {
 bool action_released(const char* key) {
     Action* action = NULL;
 
-    if (hmap_get(global.actions, key, (void**)&action)) {
+    if (hmap_get(global.actions, key, strlen(key), (void**)&action)) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];
@@ -95,7 +96,7 @@ bool action_released(const char* key) {
 bool action_pressed(const char* key) {
     Action* action = NULL;
 
-    if (hmap_get(global.actions, key, (void**)&action)) {
+    if (hmap_get(global.actions, key, strlen(key), (void**)&action)) {
         size_t size = sizeof(action->keys_bound) / sizeof(*action->keys_bound);
         for (int i = 0; i < size; i++) {
             int key = action->keys_bound[i];

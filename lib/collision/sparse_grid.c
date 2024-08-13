@@ -39,10 +39,10 @@ typedef struct SparseGrid {
 static Array* sparse_grid_region_get(SparseGrid* this, int x, int y) {
     char grid_key[48];
     Array* array = NULL;
-    snprintf(grid_key, sizeof(grid_key), "%d,%d", x, y);
-    if (!hmap_get(this->grid_map, grid_key, (void**)&array)) {
+    uint32_t len = sprintf(grid_key, "%d,%d", x, y);
+    if (!hmap_get(this->grid_map, grid_key, len, (void**)&array)) {
         array = array_new();
-        if (!hmap_put(this->grid_map, grid_key, array)) {
+        if (!hmap_put(this->grid_map, grid_key, len, array)) {
             perror("failed to insert new array into sparse grid");
             array_free(array);
             array = NULL;

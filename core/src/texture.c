@@ -11,7 +11,7 @@ static HashMap* uid_lookup;
 
 Texture texture_load(const char* filepath) {
     Texture* texture = NULL;
-    if (hmap_get(textures, filepath, (void**)&texture)) {
+    if (hmap_get(textures, filepath, strlen(filepath), (void**)&texture)) {
         return *texture;
     }
 
@@ -28,7 +28,7 @@ Texture texture_load(const char* filepath) {
     }
 
     *texture = temp;
-    if (!hmap_put(textures, filepath, texture)) {
+    if (!hmap_put(textures, filepath, strlen(filepath), texture)) {
         fprintf(stderr, "failed to cache texture: %s\n", filepath);
         UnloadTexture(temp);
         free(texture);
@@ -40,22 +40,22 @@ Texture texture_load(const char* filepath) {
 
 void texture_link_uid(const char* filepath, int uid) {
     char uid_str[32];
-    snprintf(uid_str, sizeof(uid_str), "%d", uid);
+    uint32_t len = snprintf(uid_str, sizeof(uid_str), "%d", uid);
 
-    char* p = strdup(filepath);
-    if (!hmap_put(uid_lookup, uid_str, p)) {
+    char* p      = strdup(filepath);
+    if (!hmap_put(uid_lookup, uid_str, len, p)) {
         free(p);
     }
 }
 
 Texture texture_from_uid(int uid) {
     char uid_str[32];
-    snprintf(uid_str, sizeof(uid_str), "%d", uid);
-    char* path = NULL;
+    char* path   = NULL;
+    uint32_t len = snprintf(uid_str, sizeof(uid_str), "%d", uid);
 
-    if (hmap_get(uid_lookup, uid_str, (void**)&path)) {
+    if (hmap_get(uid_lookup, uid_str, len, (void**)&path)) {
         Texture* texture = NULL;
-        if (hmap_get(textures, path, (void**)&texture)) {
+        if (hmap_get(textures, path, strlen(path), (void**)&texture)) {
             return *texture;
         }
     }
@@ -71,7 +71,7 @@ void texture_free() {
     const char* key;
     while (hmap_iter_next(h_it, &key)) {
         char* temp;
-        if (hmap_take(uid_lookup, key, (void**)&temp)) {
+        if (hmap_take(uid_lookup, key, strlen(key), (void**)&temp)) {
             free(temp);
         }
     }
@@ -79,7 +79,7 @@ void texture_free() {
     h_it = hmap_iter(textures);
     while (hmap_iter_next(h_it, &key)) {
         Texture* temp;
-        if (hmap_take(textures, key, (void**)&temp)) {
+        if (hmap_take(textures, key, strlen(key), (void**)&temp)) {
             free(temp);
         }
     }

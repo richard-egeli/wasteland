@@ -65,62 +65,62 @@ static void setup_client(UI_Base* base, void* userdata) {
 }
 
 static void collision_test(void) {
-    BoxCollider* ids[10000];
+    /*BoxCollider* ids[50000];*/
     size_t length       = 0;
 
     SparseGrid* grid    = spgrid_new();
-    BoxCollider* ground = box_collider_new(0, 688, 1280, 32);
+    BoxCollider* ground = box_collider_new(-500, 688, 1280 + 500, 32);
     spgrid_insert(grid, ground);
 
     double last_spawned = 0;
-    while (!WindowShouldClose()) {
-        float x                   = (16 * length) % 1280;
-        BoxCollider* collider     = box_collider_new(x, 0, 8, 8);
+    while (1) {
+        float x                   = (4 * length) % 1280;
+        BoxCollider* collider     = box_collider_new(x, 0, 4, 4);
         collider->type            = COLLIDER_TYPE_DYNAMIC;
         collider->gravity.enabled = true;
         spgrid_insert(grid, collider);
         last_spawned = GetTime();
-        ids[length]  = collider;
         length++;
+        /*ids[length]  = collider;*/
 
         float start = GetTime();
         spgrid_resolve(grid, GetFrameTime());
         float total = GetTime() - start;
-        if (total >= 4.0) CloseWindow();
+        if (total >= 0.016) break;
+
+        printf("Total: %f\n", total);
 
         BeginDrawing();
         ClearBackground(WHITE);
-
+        /**/
         char time[128];
-        snprintf(time, sizeof(time), "Objects: %zu\nTime: %.2f", length, total);
+        snprintf(time, sizeof(time), "Objects: %zu\nTime: %.3f", length, total);
         DrawText(time, 4, 4, 20, BLACK);
-
-        for (int i = 0; i < length; i++) {
-            BoxCollider* box = ids[i];
-            DrawRectangle(box->position.x, box->position.y, box->size.x, box->size.y, RED);
-        }
-
-        DrawRectangle(0, 688, 1280, 32, BLACK);
-
+        /*DrawRectangle(0, 688, 1280, 32, BLACK);*/
+        /**/
+        /*for (int i = 0; i < length; i++) {*/
+        /*    BoxCollider* box = ids[i];*/
+        /*    DrawRectangle(box->position.x, box->position.y, box->size.x, box->size.y, RED);*/
+        /*}*/
+        /**/
         EndDrawing();
     }
 
-    printf("Simulating %zu Objects!\n", length);
+    printf("Simulated %zu Objects!\n", length);
     exit(EXIT_SUCCESS);
 }
 
 int main(void) {
     InitWindow(1280, 720, "Temp Window");
-    SetTargetFPS(60);
+    /*SetTargetFPS(60);*/
 
+    collision_test();
     texture_init();
 
     global.camera.offset   = (Vector2){0};
     global.camera.target   = (Vector2){0};
     global.camera.rotation = 0;
     global.camera.zoom     = 1.0;
-
-    collision_test();
 
     action_register("move_up", 'w');
     action_register("move_left", 'a');

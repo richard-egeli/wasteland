@@ -6,7 +6,7 @@
 #include "collision/collision_defs.h"
 
 #ifndef SPARSE_GRID_SIZE
-#define SPARSE_GRID_SIZE 128
+#define SPARSE_GRID_SIZE 64
 #endif
 
 typedef struct SparseObject SparseObject;

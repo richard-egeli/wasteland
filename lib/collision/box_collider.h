@@ -9,10 +9,10 @@
 typedef struct BoxCollider {
     uint64_t id;
     uint32_t mask;
-    Point origin;
-    Point position;
+    IPoint origin;
+    IPoint position;
+    IPoint size;
     Point velocity;
-    Point size;
     bool debug;
     bool trigger;
     bool enabled;
@@ -43,6 +43,6 @@ void box_collider_update(BoxCollider* collider);
 
 void box_collider_free(BoxCollider* this);
 
-BoxCollider* box_collider_new(float x, float y, float width, float height);
+BoxCollider* box_collider_new(int x, int y, int width, int height);
 
 #endif  // COLLISION_BOX_COLLIDER_H_

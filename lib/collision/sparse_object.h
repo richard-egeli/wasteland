@@ -5,24 +5,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "collision/collision_defs.h"
+
 typedef struct SparseObject SparseObject;
 
 typedef struct BoxCollider BoxCollider;
-
-typedef struct AABB {
-    float xmin;
-    float xmax;
-    float ymin;
-    float ymax;
-} AABB;
-
-typedef struct Region {
-    int xmin;
-    int xmax;
-    int ymin;
-    int ymax;
-
-} Region;
 
 typedef struct SparseObject {
     AABB aabb;

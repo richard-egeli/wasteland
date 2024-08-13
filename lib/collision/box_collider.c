@@ -6,12 +6,12 @@
 #include "collision/collision_defs.h"
 
 static inline bool box_rect_overlap(Rect r1, Rect r2) {
-    return !((r2.x > r1.x + r1.w) || (r1.x > r2.x + r2.w) ||
-             (r2.y > r1.y + r1.h) || (r1.y > r2.y + r2.h));
+    return !((r2.x > r1.x + r1.w) || (r1.x > r2.x + r2.w) || (r2.y > r1.y + r1.h) ||
+             (r1.y > r2.y + r2.h));
 }
 
-static inline Point box_position(const BoxCollider *box) {
-    return (Point){
+static inline IPoint box_position(const BoxCollider *box) {
+    return (IPoint){
         box->position.x + box->origin.x,
         box->position.y + box->origin.y,
     };
@@ -21,17 +21,17 @@ inline Rect box_collider_rect(const BoxCollider *col) {
     return (Rect){
         .x = col->position.x + col->origin.x,
         .y = col->position.y + col->origin.y,
-        .w = col->size.x,
-        .h = col->size.y,
+        .w = col->size.x - 1,
+        .h = col->size.y - 1,
     };
 }
 
 inline Rect box_collider_bounds(const BoxCollider *col) {
     return (Rect){
-        .x = col->position.x + col->velocity.x + col->origin.x,
-        .y = col->position.y + col->velocity.y + col->origin.y,
-        .w = col->size.x,
-        .h = col->size.y,
+        .x = col->position.x + col->origin.x + (int)col->velocity.x,
+        .y = col->position.y + col->origin.y + (int)col->velocity.y,
+        .w = col->size.x - 1,
+        .h = col->size.y - 1,
     };
 }
 
@@ -83,8 +83,7 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
         // try to solve whichever has the highest velocity
         // this is a temp fix for colliding with dynamic objects, and it barely
         // works
-        if (b1->type == COLLIDER_TYPE_DYNAMIC &&
-            b2->type == COLLIDER_TYPE_DYNAMIC) {
+        if (b1->type == COLLIDER_TYPE_DYNAMIC && b2->type == COLLIDER_TYPE_DYNAMIC) {
             Point v1 = b1->velocity;
             Point v2 = b2->velocity;
             float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
@@ -99,17 +98,17 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
         b1->velocity.x = velocity.x;
         if (box_collider_overlap(b1, b2)) {
             if (!box_collider_slope(b1, b2)) {
-                Point p1 = box_position(b1);
-                Point p2 = box_position(b2);
+                IPoint p1 = box_position(b1);
+                IPoint p2 = box_position(b2);
                 if (p1.x < p2.x) {
-                    float pos           = p1.x + b1->size.x + b1->velocity.x;
-                    float over          = pos - p2.x;
-                    velocity.x          = b1->velocity.x - over - 0.00016f;
+                    int pos             = p1.x + b1->size.x + (int)b1->velocity.x;
+                    int over            = pos - p2.x;
+                    velocity.x          = (int)b1->velocity.x - over;
                     b1->collision.right = true;
                 } else {
-                    float pos          = p1.x + b1->velocity.x;
-                    float over         = p2.x + b2->size.x - pos;
-                    velocity.x         = b1->velocity.x + over + 0.00016f;
+                    int pos            = p1.x + (int)b1->velocity.x;
+                    int over           = p2.x + b2->size.x - pos;
+                    velocity.x         = (int)b1->velocity.x + over;
                     b1->collision.left = true;
                 }
             }
@@ -118,17 +117,17 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
         b1->velocity.x = 0;
         b1->velocity.y = velocity.y;
         if (box_collider_overlap(b1, b2)) {
-            Point p1 = box_position(b1);
-            Point p2 = box_position(b2);
+            IPoint p1 = box_position(b1);
+            IPoint p2 = box_position(b2);
             if (p1.y < p2.y) {
-                float pos            = p1.y + b1->size.y + b1->velocity.y;
-                float over           = pos - p2.y;
-                velocity.y           = b1->velocity.y - over - 0.00016f;
+                int pos              = p1.y + b1->size.y + (int)b1->velocity.y;
+                int over             = pos - p2.y;
+                velocity.y           = (int)b1->velocity.y - over;
                 b1->collision.bottom = true;
             } else {
-                float pos         = p1.y + b1->velocity.y;
-                float over        = p2.y + b2->size.y - pos;
-                velocity.y        = b1->velocity.y + over + 0.00016f;
+                int pos           = p1.y + (int)b1->velocity.y;
+                int over          = p2.y + b2->size.y - pos;
+                velocity.y        = (int)b1->velocity.y + over;
                 b1->collision.top = true;
             }
         }
@@ -140,11 +139,11 @@ void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
 void box_collider_update(BoxCollider *collider) {
     collider->position.x += collider->velocity.x;
     collider->position.y += collider->velocity.y;
-    collider->velocity.x = 0;
+    collider->velocity.x -= (int)collider->velocity.x;
     if (collider->gravity.enabled) {
         collider->velocity.y /= 1.1f;
     } else {
-        collider->velocity.y = 0;
+        collider->velocity.y = (int)collider->velocity.y;
     }
 }
 
@@ -152,11 +151,11 @@ void box_collider_free(BoxCollider *this) {
     free(this);
 }
 
-BoxCollider *box_collider_new(float x, float y, float width, float height) {
+BoxCollider *box_collider_new(int x, int y, int width, int height) {
     BoxCollider *col   = calloc(1, sizeof(*col));
     col->mask          = 0xFFFFFFFF;
-    col->size          = (Point){width, height};
-    col->position      = (Point){x, y};
+    col->size          = (IPoint){width, height};
+    col->position      = (IPoint){x, y};
     col->type          = COLLIDER_TYPE_STATIC;
     col->gravity.force = 0.98f;
     col->enabled       = true;

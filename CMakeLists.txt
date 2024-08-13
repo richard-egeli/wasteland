@@ -1,12 +1,4 @@
 cmake_minimum_required(VERSION 3.20)
-project(wasteland)
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED YES)
-set(CMAKE_C_EXTENSIONS NO)
-set(CMAKE_BUILD_TYPE Debug)
 
 # Add the ASan flags
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
@@ -15,10 +7,20 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
+message(STATUS "BUILD: ${CMAKE_BUILD_TYPE}")
 if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    message(STATUS "Compiling Release Build")
     add_definitions(-DNDEBUG)
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -march=native -flto -ffast-math")
 endif()
+
+project(wasteland)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED YES)
+set(CMAKE_C_EXTENSIONS NO)
 
 find_package(raylib QUIET)
 if (NOT raylib_FOUND)

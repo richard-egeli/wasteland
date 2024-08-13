@@ -6,12 +6,31 @@ typedef struct Point {
     float y;
 } Point;
 
+typedef struct IPoint {
+    int x;
+    int y;
+} IPoint;
+
 typedef struct Rect {
-    float x;
-    float y;
-    float w;
-    float h;
+    int x;
+    int y;
+    int w;
+    int h;
 } Rect;
+
+typedef struct AABB {
+    int xmin;
+    int xmax;
+    int ymin;
+    int ymax;
+} AABB;
+
+typedef struct Region {
+    int xmin;
+    int xmax;
+    int ymin;
+    int ymax;
+} Region;
 
 typedef enum ColliderType {
     COLLIDER_TYPE_STATIC  = 0,
