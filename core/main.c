@@ -12,6 +12,9 @@
 #include <stdlib.h>
 
 #include "action.h"
+#include "collision/box_collider.h"
+#include "collision/collision_defs.h"
+#include "collision/sparse_grid.h"
 #include "global.h"
 #include "level.h"
 #include "lua_funcs.h"
@@ -61,6 +64,51 @@ static void setup_client(UI_Base* base, void* userdata) {
     printf("Join Client\n");
 }
 
+static void collision_test(void) {
+    BoxCollider* ids[10000];
+    size_t length       = 0;
+
+    SparseGrid* grid    = spgrid_new();
+    BoxCollider* ground = box_collider_new(0, 688, 1280, 32);
+    spgrid_insert(grid, ground);
+
+    double last_spawned = 0;
+    while (!WindowShouldClose()) {
+        float x                   = (16 * length) % 1280;
+        BoxCollider* collider     = box_collider_new(x, 0, 8, 8);
+        collider->type            = COLLIDER_TYPE_DYNAMIC;
+        collider->gravity.enabled = true;
+        spgrid_insert(grid, collider);
+        last_spawned = GetTime();
+        ids[length]  = collider;
+        length++;
+
+        float start = GetTime();
+        spgrid_resolve(grid, GetFrameTime());
+        float total = GetTime() - start;
+        if (total >= 4.0) CloseWindow();
+
+        BeginDrawing();
+        ClearBackground(WHITE);
+
+        char time[128];
+        snprintf(time, sizeof(time), "Objects: %zu\nTime: %.2f", length, total);
+        DrawText(time, 4, 4, 20, BLACK);
+
+        for (int i = 0; i < length; i++) {
+            BoxCollider* box = ids[i];
+            DrawRectangle(box->position.x, box->position.y, box->size.x, box->size.y, RED);
+        }
+
+        DrawRectangle(0, 688, 1280, 32, BLACK);
+
+        EndDrawing();
+    }
+
+    printf("Simulating %zu Objects!\n", length);
+    exit(EXIT_SUCCESS);
+}
+
 int main(void) {
     InitWindow(1280, 720, "Temp Window");
     SetTargetFPS(60);
@@ -70,7 +118,9 @@ int main(void) {
     global.camera.offset   = (Vector2){0};
     global.camera.target   = (Vector2){0};
     global.camera.rotation = 0;
-    global.camera.zoom     = 2.0;
+    global.camera.zoom     = 1.0;
+
+    collision_test();
 
     action_register("move_up", 'w');
     action_register("move_left", 'a');

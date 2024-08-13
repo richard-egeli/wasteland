@@ -11,14 +11,22 @@ typedef struct BoxCollider BoxCollider;
 
 typedef struct AABB {
     float xmin;
-    float ymin;
     float xmax;
+    float ymin;
     float ymax;
 } AABB;
 
+typedef struct Region {
+    int xmin;
+    int xmax;
+    int ymin;
+    int ymax;
+
+} Region;
+
 typedef struct SparseObject {
     AABB aabb;
-    AABB region;
+    Region region;
     BoxCollider* collider;
 } SparseObject;
 
@@ -28,7 +36,7 @@ void sparse_object_aabb_update(SparseObject* this);
 
 bool sparse_object_aabb_overlap(const SparseObject* s1, const SparseObject* s2);
 
-AABB sparse_object_region_get(const SparseObject* this, size_t region_size);
+Region sparse_object_region_get(const SparseObject* this, size_t region_size);
 
 bool sparse_object_region_moved(const SparseObject* this, size_t region_size);
 

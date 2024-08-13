@@ -21,7 +21,7 @@ bool sparse_object_aabb_overlap(const SparseObject* s1, const SparseObject* s2) 
              s1->aabb.ymin > s2->aabb.ymax || s1->aabb.ymax < s2->aabb.ymin);
 }
 
-AABB sparse_object_region_get(const SparseObject* this, size_t region_size) {
+Region sparse_object_region_get(const SparseObject* this, size_t region_size) {
     return this->region;
 }
 
@@ -45,10 +45,10 @@ bool sparse_object_region_moved(const SparseObject* this, size_t region_size) {
 }
 
 void sparse_object_region_update(SparseObject* this, size_t region_size) {
-    this->region.xmin = this->aabb.xmin / region_size;
-    this->region.xmax = this->aabb.xmax / region_size;
-    this->region.ymin = this->aabb.ymin / region_size;
-    this->region.ymax = this->aabb.ymax / region_size;
+    this->region.xmin = (int)(this->aabb.xmin / region_size);
+    this->region.xmax = (int)(this->aabb.xmax / region_size);
+    this->region.ymin = (int)(this->aabb.ymin / region_size);
+    this->region.ymax = (int)(this->aabb.ymax / region_size);
 }
 
 void sparse_object_free(SparseObject* this) {

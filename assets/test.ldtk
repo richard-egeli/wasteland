@@ -4043,6 +4043,22 @@
 							"fieldInstances": [],
 							"__worldX": 320,
 							"__worldY": 544
+						},
+						{
+							"__identifier": "Tree_01",
+							"__grid": [19,6],
+							"__pivot": [0,0],
+							"__tags": [],
+							"__tile": { "tilesetUid": 1, "x": 464, "y": 96, "w": 32, "h": 48 },
+							"__smartColor": "#E4A672",
+							"iid": "12fc4280-4ce0-11ef-bae5-f1a7fd6479dd",
+							"width": 32,
+							"height": 48,
+							"defUid": 133,
+							"px": [304,96],
+							"fieldInstances": [],
+							"__worldX": 304,
+							"__worldY": 464
 						}
 					]
 				},
