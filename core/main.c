@@ -12,6 +12,8 @@
 #include <stdlib.h>
 
 #include "action.h"
+#include "collision/box_collider.h"
+#include "collision/sparse_grid.h"
 #include "global.h"
 #include "level.h"
 #include "lua_funcs.h"

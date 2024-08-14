@@ -40,7 +40,7 @@ function NPC:follow_grid(delta)
 		end
 	else
 		self.path_index = self.path_index + 1
-		if self.path_index >= #self.path then
+		if self.path_index > #self.path then
 			self.path_index = 1
 		end
 	end

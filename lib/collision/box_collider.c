@@ -76,16 +76,16 @@ void box_collider_resolve_x(BoxCollider *p1, BoxCollider *p2) {
         IPoint p1 = box_position(b1);
         IPoint p2 = box_position(b2);
         if (p1.x < p2.x) {
-            float speed         = b1->velocity.x;
-            float pos           = (float)(p1.x + b1->size.x) + speed;
-            float over          = pos - (float)p2.x;
-            b1->velocity.x      = over - speed;
+            float speed = b1->velocity.x;
+            float pos   = (float)(p1.x + b1->size.x) + speed;
+            float over  = pos - (float)p2.x;
+            b1->velocity.x -= over;
             b1->collision.right = true;
         } else {
-            float speed        = b1->velocity.x;
-            float pos          = (float)p1.x + speed;
-            float over         = (float)(p2.x + b2->size.x) - pos;
-            b1->velocity.x     = speed + over;
+            float speed = b1->velocity.x;
+            float pos   = (float)p1.x + speed;
+            float over  = (float)(p2.x + b2->size.x) - pos;
+            b1->velocity.x += over;
             b1->collision.left = true;
         }
     }
@@ -104,106 +104,26 @@ void box_collider_resolve_y(BoxCollider *p1, BoxCollider *p2) {
         IPoint p2 = box_position(b2);
 
         if (p1.y < p2.y) {
-            float speed          = b1->velocity.y;
-            float pos            = (float)p1.y + speed;
-            float over           = (float)pos - (p2.y - b1->size.y);
-            b1->velocity.y       = speed - over;
+            float speed = b1->velocity.y;
+            float pos   = (float)p1.y + speed;
+            float over  = (float)pos - (p2.y - b1->size.y);
+            b1->velocity.y -= over;
             b1->collision.bottom = true;
         } else {
-            float speed       = b1->velocity.y;
-            float pos         = (float)p1.y + speed;
-            float over        = (float)(p2.y + b2->size.y) - pos;
-            b1->velocity.y    = speed + over;
+            float speed = b1->velocity.y;
+            float pos   = (float)p1.y + speed;
+            float over  = (float)(p2.y + b2->size.y) - pos;
+            b1->velocity.y += over;
             b1->collision.top = true;
         }
     }
 }
 
-void box_collider_resolve(BoxCollider *p1, BoxCollider *p2) {
-    BoxCollider *b1 = p1;
-    BoxCollider *b2 = p2;
-
-    // make sure that they collide on the same layers
-    if (!(b1->mask & b2->mask)) return;
-
-    // we don't check if triggers overlap, only if non-triggers overlap triggers
-    if (b1->trigger) return;
-
-    if (box_collider_overlap(b1, b2)) {
-        Point velocity = b1->velocity;
-
-        if (b2->trigger) {
-            if (b2->on_collision) {
-                b2->on_collision(b2, b1);
-            }
-
-            return;
-        }
-
-        // try to solve whichever has the highest velocity
-        // this is a temp fix for colliding with dynamic objects, and it barely
-        // works
-        if (b1->type == COLLIDER_TYPE_DYNAMIC && b2->type == COLLIDER_TYPE_DYNAMIC) {
-            Point v1 = b1->velocity;
-            Point v2 = b2->velocity;
-            float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
-            float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
-            if (m2 > m1) {
-                b1 = p2;
-                b2 = p1;
-            }
-        }
-
-        b1->velocity.y = 0;
-        b1->velocity.x = velocity.x;
-        if (box_collider_overlap(b1, b2)) {
-            IPoint p1 = box_position(b1);
-            IPoint p2 = box_position(b2);
-            if (p1.x < p2.x) {
-                float speed         = velocity.x;
-                float pos           = (float)(p1.x + b1->size.x) + speed;
-                float over          = pos - (float)p2.x;
-                velocity.x          = over - speed;
-                b1->collision.right = true;
-            } else {
-                float speed        = velocity.x;
-                float pos          = (float)p1.x + speed;
-                float over         = (float)(p2.x + b2->size.x) - pos;
-                velocity.x         = speed + over;
-                b1->collision.left = true;
-            }
-        }
-
-        b1->velocity.x = velocity.x;
-        b1->velocity.y = velocity.y;
-
-        if (box_collider_overlap(b1, b2)) {
-            IPoint p1 = box_position(b1);
-            IPoint p2 = box_position(b2);
-
-            if (p1.y < p2.y) {
-                float speed          = velocity.y;
-                float pos            = (float)p1.y + speed;
-                float over           = (float)pos - (p2.y - b1->size.y);
-                velocity.y           = speed - over;
-                b1->collision.bottom = true;
-            } else {
-                float speed       = velocity.y;
-                float pos         = (float)p1.y + speed;
-                float over        = (float)(p2.y + b2->size.y) - pos;
-                velocity.y        = speed + over;
-                b1->collision.top = true;
-            }
-        }
-
-        b1->velocity = velocity;
-    }
-}
-
 void box_collider_update(BoxCollider *collider) {
     collider->position.x += (int)collider->velocity.x;
-    collider->position.y += (int)collider->velocity.y;
     collider->velocity.x -= (int)collider->velocity.x;
+
+    collider->position.y += (int)collider->velocity.y;
 
     if (collider->gravity.enabled) {
         collider->velocity.y /= 1.1f;
