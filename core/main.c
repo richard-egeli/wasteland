@@ -10,10 +10,9 @@
 #include <rlgl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "action.h"
-#include "collision/box_collider.h"
-#include "collision/sparse_grid.h"
 #include "global.h"
 #include "level.h"
 #include "lua_funcs.h"
@@ -55,17 +54,80 @@ static void lua_init(const char* file) {
     lua_pcall(global.state, 0, 0, 0);
 }
 
-static void setup_host(UI_Base* base, void* userdata) {
-    printf("Join Host\n");
-}
+static void temp() {
+    Camera3D camera   = {0};
+    camera.projection = CAMERA_PERSPECTIVE;
+    camera.fovy       = 30.0f;
+    camera.position   = (Vector3){-10, 10, 0};
+    camera.target     = (Vector3){0, 0, 0};
+    camera.up         = (Vector3){0, 1, 0};
 
-static void setup_client(UI_Base* base, void* userdata) {
-    printf("Join Client\n");
+    /*Shader shader      = LoadShader("assets/shaders/jitter.vs", "assets/shaders/jitter.fs");*/
+    Texture background = LoadTexture("assets/test/png/Level_0.png");
+    SetTextureFilter(background, TEXTURE_FILTER_POINT);
+
+    while (!WindowShouldClose()) {
+        Vector3 movement = {0};
+        if (IsKeyDown(KEY_W)) movement.x += 0.05f;
+        if (IsKeyDown(KEY_S)) movement.x -= 0.05f;
+        if (IsKeyDown(KEY_A)) movement.y -= 0.05f;
+        if (IsKeyDown(KEY_D)) movement.y += 0.05f;
+
+        UpdateCameraPro(&camera, movement, (Vector3){0}, -GetMouseWheelMove());
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        BeginMode3D(camera);
+        /*BeginShaderMode(shader);*/
+
+        rlSetTexture(background.id);
+
+        /*Matrix mvp     = GetCameraMatrix(camera);*/
+        /*float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};*/
+        /**/
+        /*SetShaderValue(shader, GetShaderLocation(shader, "color"), color, SHADER_UNIFORM_VEC4);*/
+        /*SetShaderValueMatrix(shader, GetShaderLocation(shader, "modelViewProjection"), mvp);*/
+        /*SetShaderValueTexture(shader, GetShaderLocation(shader, "texture0"), background);*/
+        /**/
+        /*float texel_size[2] = {1.0f / background.width, 1.0f / background.height};*/
+        /*SetShaderValue(shader,*/
+        /*               GetShaderLocation(shader, "texelSize"),*/
+        /*               texel_size,*/
+        /*               SHADER_UNIFORM_VEC2);*/
+
+        rlBegin(RL_QUADS);
+        rlColor4ub(255, 255, 255, 255);
+
+        float scale = 20;
+
+        rlTexCoord2f(0.0, 1.0);
+        rlVertex3f(-1.0 * scale, 0.0, -1.0 * scale);
+
+        rlTexCoord2f(1.0, 1.0);
+        rlVertex3f(-1.0 * scale, 0.0, 1.0 * scale);
+
+        rlTexCoord2f(1.0, 0.0);
+        rlVertex3f(1.0 * scale, 0.0, 1.0 * scale);
+
+        rlTexCoord2f(0.0, 0.0);
+        rlVertex3f(1.0 * scale, 0.0, -1.0 * scale);
+
+        rlEnd();
+        rlSetTexture(0);
+
+        /*EndShaderMode();*/
+        EndMode3D();
+        EndDrawing();
+    }
+
+    exit(EXIT_SUCCESS);
 }
 
 int main(void) {
     InitWindow(1280, 720, "Temp Window");
     SetTargetFPS(60);
+
+    /*temp();*/
 
     texture_init();
 
@@ -84,19 +146,18 @@ int main(void) {
     rlSetBlendFactorsSeparate(0x0302, 0x0303, 1, 0x0303, 0x8006, 0x8006);
 
     RenderTexture rt = LoadRenderTexture(1280, 720);
-
     lua_init("scripts/main.lua");
 
-    UI_Base* ui_base        = (void*)ui_new(UI_TYPE_BASE);
-    UI_Button* ui_host      = (void*)ui_new(UI_TYPE_BUTTON);
-    UI_Button* ui_client    = (void*)ui_new(UI_TYPE_BUTTON);
+    UI_Base* ui_base      = (void*)ui_new(UI_TYPE_BASE);
+    UI_Button* ui_host    = (void*)ui_new(UI_TYPE_BUTTON);
+    UI_Button* ui_client  = (void*)ui_new(UI_TYPE_BUTTON);
 
-    ui_host->base.texture   = texture_load("assets/button.png");
-    ui_host->onclick        = setup_host;
+    ui_host->base.texture = texture_load("assets/button.png");
+    /*ui_host->onclick        = setup_host;*/
 
     ui_client->base.texture = texture_load("assets/button.png");
-    ui_client->onclick      = setup_client;
-    ui_client->base.y       = 64;
+    /*ui_client->onclick      = setup_client;*/
+    ui_client->base.y = 64;
 
     ui_addchild(ui_base, (void*)ui_host);
     ui_addchild(ui_base, (void*)ui_client);
@@ -123,29 +184,23 @@ int main(void) {
             lua_pop(global.state, -1);
         }
 
-        BeginTextureMode(rt);
+        BeginDrawing();
         ClearBackground(WHITE);
+
+        BeginMode2D(global.camera);
         BeginBlendMode(BLEND_CUSTOM_SEPARATE);
+        float scale   = 2.4;
+        Rectangle src = {0, 0, rt.texture.width, -rt.texture.height};
+        Rectangle dst = {0, 0, GetScreenWidth(), GetScreenHeight()};
 
         if (global.level) {
             level_update(global.level);
         }
 
-        EndBlendMode();
-
-        EndTextureMode();
-        BeginDrawing();
-        ClearBackground(WHITE);
-
-        BeginMode2D(global.camera);
-        float scale   = 2.4;
-        Rectangle src = {0, 0, rt.texture.width, -rt.texture.height};
-        Rectangle dst = {0, 0, GetScreenWidth(), GetScreenHeight()};
         DrawTexturePro(rt.texture, src, dst, (Vector2){0}, 0, WHITE);
         DrawFPS(0, 0);
 
-        /*ui_draw(ui_base);*/
-
+        EndBlendMode();
         EndMode2D();
         EndDrawing();
     }
