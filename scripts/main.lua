@@ -38,7 +38,13 @@ Player = nil
 ---@type NPC
 Test = nil
 
-Level = load_level("assets/test.ldtk", "Level_0")
+Level = load_level("assets/2.5D.ldtk", "Level_0")
+
+action_register("move_right", string.byte("D"))
+action_register("move_left", string.byte("A"))
+action_register("move_down", string.byte("S"))
+action_register("move_up", string.byte("W"))
+action_register("space", string.byte(" "))
 
 Level:load_entities("Entities", function(x, y, name, ...)
 	local args = { ... }
@@ -136,7 +142,8 @@ function update(delta_time)
 		end
 
 		for _, npc in ipairs(npcs) do
-			npc:follow_grid(delta_time)
+			-- npc:follow_grid(delta_time)
+			npc:update(delta_time, Player)
 		end
 	end
 
@@ -153,7 +160,7 @@ function update(delta_time)
 		end
 	end
 
-	-- spawn_enemy()
+	spawn_enemy()
 	solve_events()
 end
 

@@ -89,6 +89,8 @@ add_executable(${PROJECT_NAME}
   core/src/lua_entity.c
   core/src/lua_level.c
   core/src/lua_helper.c
+  core/src/lua_camera.c
+  core/src/lua_action.c
 )
 
 message(STATUS ${enet_SOURCE_DIR})

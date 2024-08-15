@@ -1,7 +1,6 @@
 #include "collision/box_collider.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "collision/collision_defs.h"
@@ -73,6 +72,26 @@ void box_collider_resolve_x(BoxCollider *p1, BoxCollider *p2) {
     b1->velocity.y = 0;
 
     if (box_collider_overlap(b1, b2)) {
+        if (b2->trigger) {
+            if (b2->on_collision) {
+                b2->on_collision(b2, b1);
+            }
+
+            b1->velocity.y = temp;
+            return;
+        }
+
+        if (b1->type == COLLIDER_TYPE_DYNAMIC && b2->type == COLLIDER_TYPE_DYNAMIC) {
+            Point v1 = b1->velocity;
+            Point v2 = b2->velocity;
+            float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
+            float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
+            if (m2 > m1) {
+                b1 = p2;
+                b2 = p1;
+            }
+        }
+
         IPoint p1 = box_position(b1);
         IPoint p2 = box_position(b2);
         if (p1.x < p2.x) {
@@ -100,6 +119,24 @@ void box_collider_resolve_y(BoxCollider *p1, BoxCollider *p2) {
     if (!(b1->mask & b2->mask) || b1->trigger) return;
 
     if (box_collider_overlap(b1, b2)) {
+        if (b2->trigger) {
+            if (b2->on_collision) {
+                b2->on_collision(b2, b1);
+            }
+            return;
+        }
+
+        if (b1->type == COLLIDER_TYPE_DYNAMIC && b2->type == COLLIDER_TYPE_DYNAMIC) {
+            Point v1 = b1->velocity;
+            Point v2 = b2->velocity;
+            float m1 = sqrtf(v1.x * v1.x + v1.y * v1.y);
+            float m2 = sqrtf(v2.x * v2.x + v2.y * v2.y);
+            if (m2 > m1) {
+                b1 = p2;
+                b2 = p1;
+            }
+        }
+
         IPoint p1 = box_position(b1);
         IPoint p2 = box_position(b2);
 
