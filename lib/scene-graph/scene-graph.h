@@ -1,80 +1,117 @@
 #ifndef LIB_SCENE_GRAPH_NODE_H_
 #define LIB_SCENE_GRAPH_NODE_H_
 
+#include <stdint.h>
+
 #define MAX_NODES 4096
 #define NODE_NULL -1
 
+#define NODE_WORLD 0
+#define NODE_LOCAL 1
+
 typedef int Node;
 
-typedef struct {
+typedef struct SceneGraph SceneGraph;
+
+typedef struct Position {
     float x;
     float y;
 } Position;
 
-typedef struct {
-    int index;
+typedef struct SceneNode {
+    int id;
     int parent;
     int first_child;
     int next_sibling;
 } SceneNode;
 
 typedef struct GameObject {
-    void (*update)(struct GameObject* object);
-    void (*destroy)(struct GameObject* object);
-    void (*start)(struct GameObject* object);
+    Node node;
+    void (*update)(SceneGraph* graph, struct GameObject* object);
+    void (*destroy)(SceneGraph* graph, struct GameObject* object);
     void* data;
 } GameObject;
 
-typedef struct {
-    int next_index;
+typedef struct Drawable {
+    Node node;
+    void (*draw)(SceneGraph* graph, struct Drawable* renderable);
+    void (*destroy)(SceneGraph* graph, struct Drawable* renderable);
+    void* data;
+} Drawable;
+
+typedef struct __attribute__((aligned(16))) UpdatedSceneNode {
+    int index;
+    int type;
+    float x;
+    float y;
+} UpdatedSceneNode;
+
+typedef struct SceneGraph {
+    // NOTE: Local & World Transforms
     int nodes_count;
-    int indices[MAX_NODES];
+    int node_next_index;
+    int updated_nodes_count;
+    int node_indices[MAX_NODES];
     SceneNode nodes[MAX_NODES];
+    UpdatedSceneNode updated_nodes[MAX_NODES];
     Position local_positions[MAX_NODES];
     Position world_positions[MAX_NODES];
-    SceneNode updated_nodes[MAX_NODES];
+
+    // NOTE: Game Objects
     GameObject game_objects[MAX_NODES];
+    int game_object_indices[MAX_NODES];
+    int game_objects_next_index;
+    int game_objects_count;
+
+    // NOTE: Drawables
+    Drawable drawables[MAX_NODES];
+    int drawable_indices[MAX_NODES];
+    int drawables_next_index;
+    int drawables_count;
 } SceneGraph;
+
+Drawable* scene_graph_drawable_new(SceneGraph* graph, Node node);
+
+GameObject* scene_graph_game_object_new(SceneGraph* graph, Node node);
 
 Node scene_graph_node_new(SceneGraph* graph, Node parent);
 
-void scene_graph_compute_positions(SceneGraph* graph, Node node);
+void scene_graph_compute_positions(SceneGraph* graph);
+
+void scene_graph_update(SceneGraph* graph);
+
+void scene_graph_render(SceneGraph* graph);
 
 SceneGraph* scene_graph_new(void);
 
 static inline Node scene_graph_parent_get(SceneGraph* graph, Node node) {
-    return graph->nodes[graph->indices[node]].parent;
+    return graph->nodes[graph->node_indices[node]].parent;
 }
 
 static inline Position scene_graph_position_get(SceneGraph* graph, Node node) {
-    return graph->world_positions[graph->indices[node]];
+    return graph->world_positions[graph->node_indices[node]];
 }
 
 static inline Position scene_graph_local_position_get(SceneGraph* graph, Node node) {
-    return graph->local_positions[graph->indices[node]];
+    return graph->local_positions[graph->node_indices[node]];
 }
 
 static inline void scene_graph_local_position_set(SceneGraph* graph, Node node, Position position) {
-    graph->local_positions[graph->indices[node]] = position;
-    scene_graph_compute_positions(graph, node);
+    graph->updated_nodes[graph->updated_nodes_count++] = (UpdatedSceneNode){
+        .index = node,
+        .x     = position.x,
+        .y     = position.y,
+        .type  = NODE_LOCAL,
+    };
 }
 
 static inline void scene_graph_position_set(SceneGraph* graph, Node node, Position position) {
-    int index  = graph->indices[node];
-    int parent = graph->nodes[index].parent;
-    if (parent != -1) {
-        int parent_index    = graph->indices[parent];
-        Position parent_pos = graph->world_positions[parent_index];
-        Position world_pos  = (Position){
-             .x = position.x - parent_pos.x,
-             .y = position.y - parent_pos.y,
-        };
-
-        scene_graph_local_position_set(graph, node, world_pos);
-    } else {
-        // Root node so just set the position
-        scene_graph_local_position_set(graph, node, position);
-    }
+    graph->updated_nodes[graph->updated_nodes_count++] = (UpdatedSceneNode){
+        .index = node,
+        .x     = position.x,
+        .y     = position.y,
+        .type  = NODE_WORLD,
+    };
 }
 
 #endif  // LIB_SCENE_GRAPH_NODE_H_
