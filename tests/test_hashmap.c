@@ -16,8 +16,8 @@ static void test_hashmap_put(void) {
     const char* key = "MyItemKey";
     const char* ptr = NULL;
 
-    TEST_ASSERT_TRUE(hmap_put(map, key, (void*)hmap_element));
-    TEST_ASSERT_TRUE(hmap_get(map, key, (void**)&ptr));
+    TEST_ASSERT_TRUE(hmap_put(map, key, strlen(key), (void*)hmap_element));
+    TEST_ASSERT_TRUE(hmap_get(map, key, strlen(key), (void**)&ptr));
     TEST_ASSERT_EQUAL_CHAR_ARRAY(hmap_element, ptr, strlen(hmap_element));
     hmap_free(map);
 }
@@ -27,10 +27,10 @@ static void test_hashmap_take(void) {
     const char* key = "TestItemKey";
     void* ptr       = NULL;
 
-    TEST_ASSERT_TRUE(hmap_put(map, key, (void*)hmap_element));
-    TEST_ASSERT_TRUE(hmap_take(map, key, &ptr));
+    TEST_ASSERT_TRUE(hmap_put(map, key, strlen(key), (void*)hmap_element));
+    TEST_ASSERT_TRUE(hmap_take(map, key, strlen(key), &ptr));
     TEST_ASSERT_EQUAL_CHAR_ARRAY(hmap_element, ptr, strlen(hmap_element));
-    TEST_ASSERT_FALSE(hmap_take(map, key, ptr));
+    TEST_ASSERT_FALSE(hmap_take(map, key, strlen(key), ptr));
     hmap_free(map);
 }
 
@@ -42,7 +42,7 @@ static void test_hashmap_multiple_put(void) {
         *v        = i * 1024;
 
         snprintf(buf, sizeof(buf), "My Key %d\n", i);
-        TEST_ASSERT_TRUE(hmap_put(map, buf, v));
+        TEST_ASSERT_TRUE(hmap_put(map, buf, strlen(buf), v));
     }
 
     TEST_ASSERT_EQUAL(137, hmap_capacity(map));
@@ -51,7 +51,7 @@ static void test_hashmap_multiple_put(void) {
         char buf[32];
         snprintf(buf, sizeof(buf), "My Key %d\n", i);
         size_t* value = NULL;
-        TEST_ASSERT_TRUE(hmap_take(map, buf, (void**)&value));
+        TEST_ASSERT_TRUE(hmap_take(map, buf, strlen(buf), (void**)&value));
         TEST_ASSERT_EQUAL(1024 * i, *value);
         free(value);
     }
@@ -68,7 +68,7 @@ static void test_hashmap_iter(void) {
         *v        = i * 1024;
 
         snprintf(buf, sizeof(buf), "My Key %d\n", i);
-        TEST_ASSERT_TRUE(hmap_put(map, buf, v));
+        TEST_ASSERT_TRUE(hmap_put(map, buf, strlen(buf), v));
     }
 
     const char* key;
