@@ -4,9 +4,68 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "scene-graph/graph-sort.h"
+
+void scene_graph_remove_destroyed_nodes(SceneGraph *graph) {
+    for (int i = 0; i < graph->nodes_to_destroy_count; i++) {
+        // Swap the node with the last node in the array to keep it packed
+        Node node                            = graph->nodes_to_destroy[i];
+        int node_index                       = graph->node_indices[node];
+        int last_node_index                  = graph->nodes_count - 1;
+        graph->nodes[node_index]             = graph->nodes[last_node_index];
+        graph->node_indices[last_node_index] = node_index;
+        graph->node_indices[node_index]      = -1;
+        graph->nodes_count--;
+
+        // Swap and potentially remove the game object
+        int game_object_index = graph->game_object_indices[node_index];
+        if (game_object_index != -1) {
+            GameObject *object = &graph->game_objects[game_object_index];
+            if (object->destroy != NULL) {
+                object->destroy(graph, object);
+            }
+
+            int last_game_object_index             = graph->game_objects_count - 1;
+            graph->game_objects[game_object_index] = graph->game_objects[last_game_object_index];
+            graph->game_object_indices[last_game_object_index] = game_object_index;
+            graph->game_object_indices[node_index]             = -1;
+            graph->game_objects_count--;
+        }
+
+        // Swap and potentially remove the drawable
+        int drawable_index = graph->drawable_indices[node_index];
+        if (drawable_index != -1) {
+            Drawable *drawable = &graph->drawables[drawable_index];
+            if (drawable->destroy != NULL) {
+                drawable->destroy(graph, drawable);
+            }
+
+            int last_drawable_index                      = graph->drawables_count - 1;
+            graph->drawables[drawable_index]             = graph->drawables[last_node_index];
+            graph->drawable_indices[last_drawable_index] = drawable_index;
+            graph->drawable_indices[node_index]          = -1;
+            graph->drawables_count--;
+        }
+    }
+}
+
+static int scene_graph_next_index(int *array, int *index) {
+    assert(array != NULL && "Array cannot be NULL");
+    assert(index != NULL && "Index cannot be NULL");
+
+    int start = *index;
+    while (array[*index] != -1) {
+        *index = (*index + 1) % MAX_NODES;
+        if (*index == start) {
+            assert(0 && "Overflow");
+        }
+    }
+
+    int result = *index;
+    *index     = (result + 1) % MAX_NODES;
+    return result;
+}
 
 inline static void scene_graph_compute_node_position(SceneGraph *graph, int index) {
     if (graph->nodes[index].parent != -1) {
@@ -71,23 +130,6 @@ void scene_graph_compute_positions(SceneGraph *graph) {
     graph->updated_nodes_count = 0;
 }
 
-static int scene_graph_next_free_index(SceneGraph *graph) {
-    assert(graph != NULL && "Scene graph cannot be NULL");
-    assert(graph->nodes_count < MAX_NODES && "Scene graph overflow");
-
-    int start = graph->node_next_index;
-    while (graph->node_indices[graph->node_next_index] != -1) {
-        graph->node_next_index = (graph->node_next_index + 1) % MAX_NODES;
-        if (graph->node_next_index == start) {
-            assert(0 && "Scene graph is full?");
-        }
-    }
-
-    int index              = graph->node_next_index;
-    graph->node_next_index = (graph->node_next_index + 1) % MAX_NODES;
-    return index;
-}
-
 GameObject *scene_graph_game_object_new(SceneGraph *graph, Node node) {
     assert(node >= 0 && node < MAX_NODES && "Invalid Node?");
     assert(graph->game_objects_count < MAX_NODES && "Game object overflow");
@@ -134,7 +176,7 @@ Node scene_graph_node_new(SceneGraph *graph, Node parent) {
         return 0;
     }
 
-    int index              = scene_graph_next_free_index(graph);
+    int index              = scene_graph_next_index(graph->node_indices, &graph->node_next_index);
     SceneNode *parent_node = &graph->nodes[graph->node_indices[parent]];
     if (parent_node->first_child == -1) {
         parent_node->first_child = index;
@@ -177,15 +219,7 @@ void scene_graph_update(SceneGraph *graph) {
 }
 
 void scene_graph_render(SceneGraph *graph) {
-    clock_t start = clock();  // Start the timer
-
-    scene_graph_ysort(graph);  // Function to measure
-
-    clock_t end            = clock();  // End the timer
-    double elapsed_time_ms = (double)(end - start) / CLOCKS_PER_SEC *
-                             1000;  // Convert to milliseconds
-
-    printf("scene_graph_ysort took %.3f ms\n", elapsed_time_ms);
+    scene_graph_ysort(graph);
 
     for (int i = 0; i < graph->drawables_count; i++) {
         Drawable *obj = &graph->drawables[i];

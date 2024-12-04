@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MAX_NODES 4096
+#define MAX_NODES 8192
 #define NODE_NULL -1
 
 #define NODE_WORLD 0
@@ -49,11 +49,12 @@ typedef struct __attribute__((aligned(16))) UpdatedSceneNode {
 typedef struct SceneGraph {
     // NOTE: Local & World Transforms
     int nodes_count;
-    int node_next_index;
-    int updated_nodes_count;
     int node_indices[MAX_NODES];
+    int node_next_index;
     SceneNode nodes[MAX_NODES];
     UpdatedSceneNode updated_nodes[MAX_NODES];
+    int updated_nodes_count;
+
     Position local_positions[MAX_NODES];
     Position world_positions[MAX_NODES];
 
@@ -68,6 +69,10 @@ typedef struct SceneGraph {
     int drawable_indices[MAX_NODES];
     int drawables_next_index;
     int drawables_count;
+
+    // NOTE: Destruction Queue
+    int nodes_to_destroy[MAX_NODES];
+    int nodes_to_destroy_count;
 } SceneGraph;
 
 Drawable* scene_graph_drawable_new(SceneGraph* graph, Node node);
@@ -76,6 +81,8 @@ GameObject* scene_graph_game_object_new(SceneGraph* graph, Node node);
 
 Node scene_graph_node_new(SceneGraph* graph, Node parent);
 
+void scene_graph_remove_destroyed_nodes(SceneGraph* graph);
+
 void scene_graph_compute_positions(SceneGraph* graph);
 
 void scene_graph_update(SceneGraph* graph);
@@ -83,6 +90,10 @@ void scene_graph_update(SceneGraph* graph);
 void scene_graph_render(SceneGraph* graph);
 
 SceneGraph* scene_graph_new(void);
+
+static inline void scene_graph_node_destroy(SceneGraph* graph, Node node) {
+    graph->nodes_to_destroy[graph->nodes_to_destroy_count++] = node;
+}
 
 static inline Node scene_graph_parent_get(SceneGraph* graph, Node node) {
     return graph->nodes[graph->node_indices[node]].parent;
