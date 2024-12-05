@@ -3,27 +3,15 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 #define MAX_THREAD_POOL_TASKS 256
 #define THREAD_COUNT          8
 
-typedef enum TaskStatus {
-    TASK_PENDING,
-    TASK_COMPLETED,
-    TASK_ERROR,
-} TaskStatus;
-
-typedef struct TaskResult {
-    void* data;
-    size_t size;
-    TaskStatus status;
-} TaskResult;
-
 typedef struct Task {
-    void* (*function)(void*);
+    void (*function)(void*);
     void* argument;
-    TaskResult* result;
     atomic_bool completed;
 } Task;
 
@@ -35,13 +23,15 @@ typedef struct ThreadPool {
     atomic_bool stop;
 } ThreadPool;
 
-int thread_pool_push(ThreadPool* pool, Task* task);
+Task* thread_pool_push(ThreadPool* pool, void (*function)(void*), void* arg);
 
-int thread_pool_pop(ThreadPool* pool);
+Task* thread_pool_pop(ThreadPool* pool);
 
 void thread_pool_wait(ThreadPool* pool, Task* task);
 
-TaskResult* thread_pool_submit(ThreadPool* pool, void* (*function)(void*), void* argument);
+void thread_pool_wait_all(ThreadPool* pool);
+
+bool thread_pool_complete(ThreadPool* pool, Task* task);
 
 void thread_pool_destroy(ThreadPool* pool);
 

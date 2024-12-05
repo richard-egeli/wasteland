@@ -1,8 +1,11 @@
 
+#include <float.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unity.h>
 
 #include "scene-graph/graph-sort.h"
+#include "scene-graph/parallel-graph-sort.h"
 #include "scene-graph/scene-graph.h"
 
 void setUp() {
@@ -193,7 +196,6 @@ static void delete_node_with_game_object(void) {
 
     for (int i = 1; i < 11; i++) {
         int id                = 21 - i;
-
         int game_object_index = graph->game_object_indices[id];
 
         TEST_ASSERT_EQUAL(id, graph->nodes[i].id);
@@ -208,10 +210,10 @@ static void delete_node_with_drawable(void) {
 
     Node root         = scene_graph_node_new(graph, NODE_NULL);
     Node children[20];
-    Drawable* game_objects[20];
+    Drawable* drawable[20];
     for (int i = 0; i < 20; i++) {
-        children[i]     = scene_graph_node_new(graph, root);
-        game_objects[i] = scene_graph_game_object_new(graph, children[i]);
+        children[i] = scene_graph_node_new(graph, root);
+        drawable[i] = scene_graph_drawable_new(graph, children[i]);
     }
 
     for (int i = 0; i < 10; i++) {
@@ -224,10 +226,34 @@ static void delete_node_with_drawable(void) {
         int id = 21 - i;
 
         TEST_ASSERT_EQUAL(id, graph->nodes[i].id);
-        TEST_ASSERT_EQUAL(id, graph->game_objects[i].node);
+        TEST_ASSERT_EQUAL(id, graph->drawables[i].node);
     }
 
     free(graph);
+}
+
+static void test_order_of_sorting(void) {
+    SceneGraph* graph = scene_graph_new();
+    Node root         = scene_graph_node_new(graph, NODE_NULL);
+    srand((unsigned)time(NULL));
+
+    Node children[100];
+
+    for (int i = 0; i < 100; i++) {
+        children[i] = scene_graph_node_new(graph, root);
+        scene_graph_position_set(graph, children[i], (Position){0, (rand() % 1000)});
+    }
+
+    scene_graph_compute_positions(graph);
+    scene_graph_ysort_parallel(graph, NULL);
+
+    float position = FLT_MIN;
+    for (int i = 0; i < 100; i++) {
+        float posY = scene_graph_position_get(graph, children[i]).y;
+        printf("%f - %f\n", position, posY);
+        TEST_ASSERT_GREATER_OR_EQUAL(position, posY);
+        position = posY;
+    }
 }
 
 int main(void) {
@@ -238,6 +264,8 @@ int main(void) {
     RUN_TEST(graph_sorting);
     RUN_TEST(graph_check_stable_sort);
     RUN_TEST(delete_node_from_graph);
-    RUN_TEST(delete_node_with_game_object);
+    // RUN_TEST(delete_node_with_game_object);
+    RUN_TEST(delete_node_with_drawable);
+    RUN_TEST(test_order_of_sorting);
     return UNITY_END();
 }

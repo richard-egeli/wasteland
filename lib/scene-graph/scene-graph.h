@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MAX_NODES 8192
+#define MAX_NODES 10000
 #define NODE_NULL -1
 
 #define NODE_WORLD 0

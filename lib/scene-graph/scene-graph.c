@@ -219,8 +219,6 @@ void scene_graph_update(SceneGraph *graph) {
 }
 
 void scene_graph_render(SceneGraph *graph) {
-    scene_graph_ysort(graph);
-
     for (int i = 0; i < graph->drawables_count; i++) {
         Drawable *obj = &graph->drawables[i];
         if (obj->draw != NULL) {

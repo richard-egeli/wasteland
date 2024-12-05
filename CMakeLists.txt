@@ -27,10 +27,8 @@ add_subdirectory(lib/hashmap)
 add_subdirectory(lib/array)
 add_subdirectory(lib/ldtk)
 add_subdirectory(lib/ui)
-add_subdirectory(lib/scene-graph)
 add_subdirectory(lib/thread-pool)
-
-message(STATUS ${LUA_INCLUDE_DIR})
+add_subdirectory(lib/scene-graph)
 
 add_executable(${PROJECT_NAME} 
   core/main.c 
@@ -58,7 +56,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   core/include 
 )
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
   scene-graph
   thread-pool
   collision 

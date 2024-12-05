@@ -4,6 +4,7 @@
 #include <pthread/sched.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,8 +25,7 @@ static void* worker_thread(void* arg) {
             Task* task = &pool->tasks[tail];
 
             if (task->function) {
-                task->result->data   = task->function(task->argument);
-                task->result->status = (task->result->data) ? TASK_COMPLETED : TASK_ERROR;
+                task->function(task->argument);
                 atomic_store(&task->completed, true);
             }
         }
@@ -34,50 +34,50 @@ static void* worker_thread(void* arg) {
     return NULL;
 }
 
-int thread_pool_push(ThreadPool* pool, Task* task) {
+Task* thread_pool_push(ThreadPool* pool, void (*function)(void*), void* args) {
     int head = atomic_load(&pool->head);
     int tail = atomic_load(&pool->tail);
 
     // Check if queue is full
     if ((head + 1) % MAX_THREAD_POOL_TASKS == tail) {
-        return -1;  // Queue full
+        return NULL;
     }
 
     // Try to push task using compare-and-swap
     if (atomic_compare_exchange_strong(&pool->head, &head, (head + 1) % MAX_THREAD_POOL_TASKS)) {
-        pool->tasks[head] = *task;
-        return 0;
+        Task task;
+        atomic_init(&task.completed, false);
+        task.function     = function;
+        task.argument     = args;
+        pool->tasks[head] = task;
+        return &pool->tasks[head];
     }
 
-    return -1;
+    return NULL;
 }
 
-void thread_pool_wait(ThreadPool* pool, Task* task) {
-    while (!atomic_load(&task->completed)) {
+bool thread_pool_complete(ThreadPool* pool, Task* task) {
+    return atomic_load(&task->completed);
+}
+
+void thread_pool_wait_all(ThreadPool* pool) {
+    int tail = atomic_load(&pool->tail);
+    int head = atomic_load(&pool->head);
+
+    // Iterate over all tasks in the queue
+    for (int i = tail; i != head; i = (i + 1) % MAX_THREAD_POOL_TASKS) {
+        Task* task = &pool->tasks[i];
+        // Wait for the task to complete
+        while (!atomic_load(&task->completed)) {
+            sched_yield();  // Yield to other threads
+        }
+    }
+}
+
+void thread_pool_task_wait(ThreadPool* pool, Task* result) {
+    while (!atomic_load(&result->completed)) {
         sched_yield();  // Yield to other threads
     }
-}
-
-TaskResult* thread_pool_submit(ThreadPool* pool, void* (*function)(void*), void* argument) {
-    TaskResult* result = malloc(sizeof(TaskResult));
-    if (!result) return NULL;
-
-    memset(result, 0, sizeof(TaskResult));
-    result->status = TASK_PENDING;
-
-    Task task      = {
-             .function = function,
-             .argument = argument,
-             .result   = result,
-    };
-    atomic_init(&task.completed, false);
-
-    if (thread_pool_push(pool, &task) != 0) {
-        free(result);
-        return NULL;
-    }
-
-    return result;
 }
 
 void thread_pool_destroy(ThreadPool* pool) {
