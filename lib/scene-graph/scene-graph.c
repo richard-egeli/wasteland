@@ -1,6 +1,7 @@
 #include "scene-graph.h"
 
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,12 +11,13 @@
 void scene_graph_remove_destroyed_nodes(SceneGraph *graph) {
     for (int i = 0; i < graph->nodes_to_destroy_count; i++) {
         // Swap the node with the last node in the array to keep it packed
-        Node node                            = graph->nodes_to_destroy[i];
-        int node_index                       = graph->node_indices[node];
-        int last_node_index                  = graph->nodes_count - 1;
-        graph->nodes[node_index]             = graph->nodes[last_node_index];
-        graph->node_indices[last_node_index] = node_index;
-        graph->node_indices[node_index]      = -1;
+        Node node                = graph->nodes_to_destroy[i];
+        int node_index           = scene_graph_index_get(graph, node);
+        int last_node_index      = graph->nodes_count - 1;
+        graph->nodes[node_index] = graph->nodes[last_node_index];
+
+        scene_graph_index_set(graph, last_node_index, node_index);
+        scene_graph_index_set(graph, node_index, -1);
         graph->nodes_count--;
 
         // Swap and potentially remove the game object
@@ -42,7 +44,7 @@ void scene_graph_remove_destroyed_nodes(SceneGraph *graph) {
             }
 
             int last_drawable_index                      = graph->drawables_count - 1;
-            graph->drawables[drawable_index]             = graph->drawables[last_node_index];
+            graph->drawables[drawable_index]             = graph->drawables[last_drawable_index];
             graph->drawable_indices[last_drawable_index] = drawable_index;
             graph->drawable_indices[node_index]          = -1;
             graph->drawables_count--;
@@ -55,6 +57,7 @@ static int scene_graph_next_index(int *array, int *index) {
     assert(index != NULL && "Index cannot be NULL");
 
     int start = *index;
+
     while (array[*index] != -1) {
         *index = (*index + 1) % MAX_NODES;
         if (*index == start) {
@@ -67,9 +70,11 @@ static int scene_graph_next_index(int *array, int *index) {
     return result;
 }
 
-inline static void scene_graph_compute_node_position(SceneGraph *graph, int index) {
-    if (graph->nodes[index].parent != -1) {
-        int parent_index              = graph->node_indices[graph->nodes[index].parent];
+inline static void scene_graph_compute_node_position(SceneGraph *graph, Node node) {
+    int index  = scene_graph_index_get(graph, node);
+    int parent = scene_graph_parent_get(graph, node);
+    if (parent != -1) {
+        int parent_index              = scene_graph_index_get(graph, parent);
         Position world_pos            = graph->world_positions[parent_index];
         Position local_pos            = graph->local_positions[index];
         graph->world_positions[index] = (Position){
@@ -81,18 +86,15 @@ inline static void scene_graph_compute_node_position(SceneGraph *graph, int inde
     }
 }
 
-static void scene_graph_compute_position_recursive(SceneGraph *graph, SceneNode *node) {
-    int index = graph->node_indices[node->id];
-
+static void scene_graph_compute_position_recursive(SceneGraph *graph, Node node) {
     // Compute the current node's position
-    scene_graph_compute_node_position(graph, index);
+    scene_graph_compute_node_position(graph, node);
 
     // Traverse over children
-    int next = node->first_child;
+    int next = scene_graph_first_child_get(graph, node);
     while (next != -1) {
-        SceneNode *child = &graph->nodes[graph->node_indices[next]];
-        scene_graph_compute_position_recursive(graph, child);
-        next = child->next_sibling;
+        scene_graph_compute_position_recursive(graph, next);
+        next = scene_graph_sibling_get(graph, next);
     }
 }
 
@@ -101,18 +103,15 @@ void scene_graph_compute_positions(SceneGraph *graph) {
 
     for (int i = 0; i < graph->updated_nodes_count; i++) {
         UpdatedSceneNode update = graph->updated_nodes[i];
+        assert(update.node >= 0 && update.node < graph->nodes_count && "Overflow node index");
 
-        assert(update.index >= 0 && update.index < graph->nodes_count && "Overflow node index");
+        int parent = scene_graph_parent_get(graph, update.node);
+        int index  = scene_graph_index_get(graph, update.node);
+        if (update.type == NODE_WORLD && parent != -1) {
+            assert(parent >= 0 && parent < graph->nodes_count && "Overflow parent");
 
-        int index = graph->node_indices[update.index];
-        assert(index >= 0 && index < graph->nodes_count && "Invalid graph index?");
-
-        SceneNode *node = &graph->nodes[index];
-
-        if (update.type == NODE_WORLD && node->parent != -1) {
-            assert(node->parent >= 0 && node->parent < graph->nodes_count && "Overflow parent");
-
-            Position pw_pos = graph->world_positions[graph->node_indices[node->parent]];
+            int parent_index              = scene_graph_index_get(graph, parent);
+            Position pw_pos               = graph->world_positions[parent_index];
             graph->local_positions[index] = (Position){
                 .x = update.x - pw_pos.x,
                 .y = update.y - pw_pos.y,
@@ -124,7 +123,7 @@ void scene_graph_compute_positions(SceneGraph *graph) {
             };
         }
 
-        scene_graph_compute_position_recursive(graph, node);
+        scene_graph_compute_position_recursive(graph, update.node);
     }
 
     graph->updated_nodes_count = 0;
@@ -163,47 +162,53 @@ Node scene_graph_node_new(SceneGraph *graph, Node parent) {
     // If root node just initialize a basic node
     if (parent == NODE_NULL) {
         assert(graph->nodes_count == 0 && "Scene graph root node already exists");
+
+        Node node       = 0;
         graph->nodes[0] = (SceneNode){
-            .id           = 0,
-            .parent       = -1,
-            .first_child  = -1,
-            .next_sibling = -1,
+            .id = node,
         };
 
-        graph->node_indices[0] = 0;
+        scene_graph_index_set(graph, node, 0);
+        scene_graph_sibling_set(graph, node, -1);
+        scene_graph_parent_set(graph, node, -1);
+        scene_graph_first_child_set(graph, node, -1);
+
         graph->nodes_count     = 1;
         graph->node_next_index = 1;
         return 0;
     }
 
-    int index              = scene_graph_next_index(graph->node_indices, &graph->node_next_index);
-    SceneNode *parent_node = &graph->nodes[graph->node_indices[parent]];
-    if (parent_node->first_child == -1) {
-        parent_node->first_child = index;
+    int index = graph->nodes_count;  // scene_graph_next_index(graph->node_indices,
+                                     // &graph->node_next_index);
+
+    if (scene_graph_first_child_get(graph, parent) == -1) {
+        scene_graph_first_child_set(graph, parent, index);
     } else {
-        assert(parent_node->first_child < MAX_NODES);
-        assert(parent_node->first_child >= 0);
+        Node child_node = scene_graph_first_child_get(graph, parent);
 
-        // Find the last sibling of the parent
-        SceneNode *lastChild = &graph->nodes[parent_node->first_child];
-        while (lastChild->next_sibling != -1) {
-            lastChild = &graph->nodes[lastChild->next_sibling];
+        assert(child_node < MAX_NODES);
+        assert(child_node > 0);
+
+        Node current      = child_node;
+        Node last_sibling = current;
+        while (current != -1) {
+            last_sibling = current;
+            current      = scene_graph_sibling_get(graph, current);
         }
-
-        // Append as a sibling
-        lastChild->next_sibling = index;
+        scene_graph_sibling_set(graph, last_sibling, index);
     }
 
     // Add the new node to the graph
     graph->nodes[graph->nodes_count] = (SceneNode){
-        .parent       = parent_node->id,
-        .id           = index,
-        .next_sibling = -1,
-        .first_child  = -1,
+        .id = index,
     };
 
+    scene_graph_index_set(graph, graph->nodes_count, index);
+    scene_graph_sibling_set(graph, index, -1);
+    scene_graph_first_child_set(graph, index, -1);
+    scene_graph_parent_set(graph, index, parent);
+
     // Track the new node in the updated list
-    graph->node_indices[index] = graph->nodes_count;
     graph->nodes_count++;
 
     return index;
@@ -232,6 +237,7 @@ SceneGraph *scene_graph_new(void) {
     assert(graph != NULL && "Scene graph cannot be null");
 
     for (int i = 0; i < MAX_NODES; i++) {
+        scene_graph_index_set(graph, i, -1);
         graph->node_indices[i]        = -1;
         graph->drawable_indices[i]    = -1;
         graph->game_object_indices[i] = -1;

@@ -5,6 +5,8 @@ typedef struct SceneGraph SceneGraph;
 
 typedef struct ThreadPool ThreadPool;
 
-void scene_graph_ysort_parallel(SceneGraph* graph, ThreadPool* pool);
+typedef struct thpool_* threadpool;
+
+void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool);
 
 #endif  //  LIB_SCENE_GRAPH_PARALLEL_GRAPH_SORT_H_
