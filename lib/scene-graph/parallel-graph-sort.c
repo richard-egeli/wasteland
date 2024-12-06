@@ -11,7 +11,6 @@
 
 #include "scene-graph/scene-graph.h"
 #include "thpool/thpool.h"
-// #include "thread-pool/thread-pool.h"
 
 SceneGraph* global_graph_context;
 
@@ -98,7 +97,6 @@ typedef struct Arguments {
     SceneGraph* graph;
     SceneNode* nodes;
     int nodes_count;
-    int count;
 } Arguments;
 
 static void scene_graph_parallel(void* arg) {
@@ -115,12 +113,13 @@ void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool) {
     assert(graph != NULL && "Graph cannot be NULL");
     global_graph_context = graph;
 
-    int thread_init      = 10000;
+    int thread_init      = 5000;
     int thread_count     = graph->nodes_count / thread_init;
-    Arguments args[thread_count];
+    Arguments args[thread_count + 1];
     int offset = 0;
 
     if (pool != NULL && thread_count > 0) {
+        // process nodes multithreaded
         offset = thread_count * thread_init;
         for (int i = 0; i < thread_count; i++) {
             args[i] = (Arguments){
@@ -131,11 +130,19 @@ void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool) {
 
             thpool_add_work(pool, scene_graph_parallel, &args[i]);
         }
-    }
 
-    // Process remaining nodes
-    for (int i = offset; i < graph->nodes_count; i++) {
-        sort_children(graph, graph->nodes[i].id);
+        args[thread_count] = (Arguments){
+            .nodes       = &graph->nodes[offset],
+            .nodes_count = graph->nodes_count - offset,
+            .graph       = graph,
+        };
+
+        thpool_add_work(pool, scene_graph_parallel, &args[thread_count]);
+    } else {
+        // Process remaining nodes singlethreaded
+        for (int i = offset; i < graph->nodes_count; i++) {
+            sort_children(graph, graph->nodes[i].id);
+        }
     }
 
     // Now collect into temp arrays
