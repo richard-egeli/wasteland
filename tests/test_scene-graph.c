@@ -194,12 +194,13 @@ static void delete_node_with_game_object(void) {
 
     scene_graph_remove_destroyed_nodes(graph);
 
-    for (int i = 1; i < 11; i++) {
-        int id                = 21 - i;
+    for (int i = 0; i < 10; i++) {
+        int id                = 20 - i;
         int game_object_index = graph->game_object_indices[id];
 
-        TEST_ASSERT_EQUAL(id, graph->nodes[i].id);
-        TEST_ASSERT_EQUAL(id, graph->game_objects[game_object_index].node);
+        // +1 to avoid checking the root node
+        TEST_ASSERT_EQUAL(id, graph->nodes[i + 1].id);
+        TEST_ASSERT_EQUAL(id, graph->game_objects[i].node);
     }
 
     free(graph);
@@ -222,10 +223,11 @@ static void delete_node_with_drawable(void) {
 
     scene_graph_remove_destroyed_nodes(graph);
 
-    for (int i = 1; i < 11; i++) {
-        int id = 21 - i;
+    for (int i = 0; i < 10; i++) {
+        int id = 20 - i;
 
-        TEST_ASSERT_EQUAL(id, graph->nodes[i].id);
+        // +1 to avoid checking the root node
+        TEST_ASSERT_EQUAL(id, graph->nodes[i + 1].id);
         TEST_ASSERT_EQUAL(id, graph->drawables[i].node);
     }
 
@@ -264,7 +266,7 @@ int main(void) {
     RUN_TEST(graph_sorting);
     RUN_TEST(graph_check_stable_sort);
     RUN_TEST(delete_node_from_graph);
-    // RUN_TEST(delete_node_with_game_object);
+    RUN_TEST(delete_node_with_game_object);
     RUN_TEST(delete_node_with_drawable);
     RUN_TEST(test_order_of_sorting);
     return UNITY_END();
