@@ -29,6 +29,7 @@ add_subdirectory(lib/ldtk)
 add_subdirectory(lib/ui)
 add_subdirectory(lib/thread-pool)
 add_subdirectory(lib/scene-graph)
+add_subdirectory(lib/thpool)
 
 add_executable(${PROJECT_NAME} 
   core/main.c 
@@ -57,6 +58,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME}
+  thpool
   scene-graph
   thread-pool
   collision 
