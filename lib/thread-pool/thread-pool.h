@@ -29,8 +29,6 @@ Task* thread_pool_pop(ThreadPool* pool);
 
 void thread_pool_wait(ThreadPool* pool, Task* task);
 
-void thread_pool_wait_all(ThreadPool* pool);
-
 bool thread_pool_complete(ThreadPool* pool, Task* task);
 
 void thread_pool_destroy(ThreadPool* pool);
