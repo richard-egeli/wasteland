@@ -6,7 +6,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 
-#define MAX_NODES 10000
+#define MAX_NODES 32768
 #define NODE_NULL -1
 
 #define NODE_WORLD 0
@@ -14,7 +14,7 @@
 
 #define USE_ATOMIC 0
 
-typedef int Node;
+typedef int16_t Node;
 
 typedef struct SceneGraph SceneGraph;
 
@@ -24,15 +24,15 @@ typedef struct Position {
 } Position;
 
 typedef struct SceneNode {
-    int id;
+    int16_t id;
 #if USE_ATOMIC
     atomic_int parent;
     atomic_int first_child;
     atomic_int next_sibling;
 #else
-    int parent;
-    int first_child;
-    int next_sibling;
+    int16_t parent;
+    int16_t first_child;
+    int16_t next_sibling;
 #endif
 } SceneNode;
 
@@ -51,7 +51,7 @@ typedef struct Drawable {
 } Drawable;
 
 typedef struct __attribute__((aligned(16))) UpdatedSceneNode {
-    int node;
+    Node node;
     int type;
     float x;
     float y;

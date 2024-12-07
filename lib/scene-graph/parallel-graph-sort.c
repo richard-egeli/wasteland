@@ -31,7 +31,7 @@ static void sort_children(SceneGraph* graph, Node node) {
     int child = scene_graph_first_child_get(graph, node);
 
     // First count children
-    while (child != -1) {
+    while (child != NODE_NULL) {
         child = scene_graph_sibling_get(graph, child);
         count++;
     }
@@ -55,7 +55,7 @@ static void sort_children(SceneGraph* graph, Node node) {
         }
 
         scene_graph_first_child_set(graph, node, nodes[0]);
-        scene_graph_sibling_set(graph, nodes[count - 1], -1);
+        scene_graph_sibling_set(graph, nodes[count - 1], NODE_NULL);
 
         free(nodes);
     }
@@ -69,14 +69,14 @@ static void scene_graph_populate_array(SceneGraph* graph,
     int stack_len = 0;
     int node      = first_node;
 
-    while (node != -1) {
+    while (node != NODE_NULL) {
         int index    = *node_count;
         nodes[index] = *scene_graph_node_get(graph, node);
         (*node_count)++;
 
         Node first_child = scene_graph_first_child_get(graph, node);
 
-        if (first_child != -1) {
+        if (first_child != NODE_NULL) {
             // add the node to the stack
             stack[stack_len++] = node;
             node               = first_child;
@@ -85,7 +85,7 @@ static void scene_graph_populate_array(SceneGraph* graph,
             node = scene_graph_sibling_get(graph, node);
 
             // If no sibling, backtrack up the stack until we find a node with an unvisited sibling
-            while (node == -1 && stack_len > 0) {
+            while (node == NODE_NULL && stack_len > 0) {
                 stack_len--;  // Pop the stack
                 node = scene_graph_sibling_get(graph, stack[stack_len]);
             }
@@ -167,7 +167,7 @@ void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool) {
         temp_local_positions[i] = graph->local_positions[old_node_idx];
         temp_world_positions[i] = graph->world_positions[old_node_idx];
 
-        if (old_draw_idx != -1) {
+        if (old_draw_idx != NODE_NULL) {
             temp_drawables[temp_drawable_count++] = graph->drawables[old_draw_idx];
         }
     }
