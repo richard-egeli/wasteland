@@ -130,7 +130,7 @@ void scene_graph_compute_positions(SceneGraph *graph) {
 }
 
 GameObject *scene_graph_game_object_new(SceneGraph *graph, Node node) {
-    assert(node >= 0 && node < MAX_NODES && "Invalid Node?");
+    assert(node >= 0 && "Invalid Node?");
     assert(graph->game_objects_count < MAX_NODES && "Game object overflow");
 
     graph->game_object_indices[node] = graph->game_objects_count;
@@ -143,7 +143,7 @@ GameObject *scene_graph_game_object_new(SceneGraph *graph, Node node) {
 }
 
 Drawable *scene_graph_drawable_new(SceneGraph *graph, Node node) {
-    assert(node >= 0 && node < MAX_NODES && "Invalid Node?");
+    assert(node >= 0 && "Invalid Node?");
     assert(graph->drawables_count < MAX_NODES && "Drawable overflow");
 
     graph->drawable_indices[node] = graph->drawables_count;
@@ -184,8 +184,6 @@ Node scene_graph_node_new(SceneGraph *graph, Node parent) {
         scene_graph_first_child_set(graph, parent, index);
     } else {
         Node child_node = scene_graph_first_child_get(graph, parent);
-
-        assert(child_node < MAX_NODES);
         assert(child_node > 0);
 
         Node current      = child_node;
@@ -199,15 +197,18 @@ Node scene_graph_node_new(SceneGraph *graph, Node parent) {
 
     // Add the new node to the graph
     graph->nodes[graph->nodes_count] = (SceneNode){
-        .id = index,
+        .id             = index,
+        .parent         = parent,
+        .first_child    = NODE_NULL,
+        .next_sibling   = NODE_NULL,
+        .children_count = 0,
+        .layer          = 0,
     };
 
-    scene_graph_index_set(graph, graph->nodes_count, index);
-    scene_graph_sibling_set(graph, index, NODE_NULL);
-    scene_graph_first_child_set(graph, index, NODE_NULL);
-    scene_graph_parent_set(graph, index, parent);
+    scene_graph_index_set(graph, index, index);
 
     // Track the new node in the updated list
+    scene_graph_node_get(graph, parent)->children_count++;
     graph->nodes_count++;
 
     return index;

@@ -12,9 +12,7 @@
 #define NODE_WORLD 0
 #define NODE_LOCAL 1
 
-#define USE_ATOMIC 0
-
-typedef int16_t Node;
+typedef int Node;
 
 typedef struct SceneGraph SceneGraph;
 
@@ -24,16 +22,12 @@ typedef struct Position {
 } Position;
 
 typedef struct SceneNode {
-    int16_t id;
-#if USE_ATOMIC
-    atomic_int parent;
-    atomic_int first_child;
-    atomic_int next_sibling;
-#else
-    int16_t parent;
-    int16_t first_child;
-    int16_t next_sibling;
-#endif
+    int id;
+    int parent;
+    int first_child;
+    int next_sibling;
+    int children_count;
+    int layer;
 } SceneNode;
 
 typedef struct GameObject {
@@ -60,11 +54,7 @@ typedef struct __attribute__((aligned(16))) UpdatedSceneNode {
 typedef struct SceneGraph {
     // NOTE: Local & World Transforms
     int nodes_count;
-#if USE_ATOMIC
-    atomic_int node_indices[MAX_NODES];
-#else
     int node_indices[MAX_NODES];
-#endif
     int node_next_index;
     SceneNode nodes[MAX_NODES];
     UpdatedSceneNode updated_nodes[MAX_NODES];
@@ -107,20 +97,28 @@ void scene_graph_render(SceneGraph* graph);
 SceneGraph* scene_graph_new(void);
 
 static inline int scene_graph_index_get(const SceneGraph* graph, Node node) {
-    assert(node < MAX_NODES && node >= 0 && "Node is out of bounds");
-#if USE_ATOMIC
-    return atomic_load(&graph->node_indices[node]);
-#else
+    assert(node >= 0 && node < MAX_NODES && "Node is out of bounds");
     return graph->node_indices[node];
-#endif
 }
 
 static inline void scene_graph_index_set(SceneGraph* graph, Node node, int index) {
-#if USE_ATOMIC
-    atomic_store(&graph->node_indices[node], index);
-#else
+    assert(node >= 0 && node < MAX_NODES && "Node is out of bounds");
     graph->node_indices[node] = index;
-#endif
+}
+
+static inline int scene_graph_node_child_count(const SceneGraph* graph, Node node) {
+    int index = scene_graph_index_get(graph, node);
+    return graph->nodes[index].children_count;
+}
+
+static inline int scene_graph_layer_set(SceneGraph* graph, Node node, int layer) {
+    int index                        = scene_graph_index_get(graph, node);
+    return graph->nodes[index].layer = layer;
+}
+
+static inline int scene_graph_layer_get(const SceneGraph* graph, Node node) {
+    int index = scene_graph_index_get(graph, node);
+    return graph->nodes[index].layer;
 }
 
 static inline SceneNode* scene_graph_node_get(SceneGraph* graph, Node node) {
@@ -130,61 +128,32 @@ static inline SceneNode* scene_graph_node_get(SceneGraph* graph, Node node) {
 
 static inline Node scene_graph_sibling_get(const SceneGraph* graph, Node node) {
     int index = scene_graph_index_get(graph, node);
-#if USE_ATOMIC
-    return index != -1 ? atomic_load(&graph->nodes[index].next_sibling) : -1;
-#else
     return index != -1 ? graph->nodes[index].next_sibling : -1;
-#endif
 }
 
 static inline void scene_graph_sibling_set(SceneGraph* graph, Node node, Node child) {
-    int index = scene_graph_index_get(graph, node);
-
-#if USE_ATOMIC
-    atomic_store(&graph->nodes[index].next_sibling, child);
-#else
+    int index                        = scene_graph_index_get(graph, node);
     graph->nodes[index].next_sibling = child;
-#endif
 }
 
 static inline void scene_graph_first_child_set(SceneGraph* graph, Node node, Node child) {
-    int index = scene_graph_index_get(graph, node);
-
-#if USE_ATOMIC
-    atomic_store(&graph->nodes[index].first_child, child);
-#else
+    int index                       = scene_graph_index_get(graph, node);
     graph->nodes[index].first_child = child;
-#endif
 }
 
 static inline Node scene_graph_first_child_get(const SceneGraph* graph, Node node) {
     int index = scene_graph_index_get(graph, node);
-
-#if USE_ATOMIC
-    return index != -1 ? atomic_load(&graph->nodes[index].first_child) : -1;
-#else
     return index != -1 ? graph->nodes[index].first_child : -1;
-#endif
 }
 
 static inline Node scene_graph_parent_get(SceneGraph* graph, Node node) {
     int index = scene_graph_index_get(graph, node);
-
-#if USE_ATOMIC
-    return atomic_load(&graph->nodes[index].parent);
-#else
     return graph->nodes[index].parent;
-#endif
 }
 
 static inline void scene_graph_parent_set(SceneGraph* graph, Node node, Node parent) {
-    int index = scene_graph_index_get(graph, node);
-
-#if USE_ATOMIC
-    atomic_store(&graph->nodes[index].parent, parent);
-#else
+    int index                  = scene_graph_index_get(graph, node);
     graph->nodes[index].parent = parent;
-#endif
 }
 
 static inline void scene_graph_node_destroy(SceneGraph* graph, Node node) {

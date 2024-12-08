@@ -4,58 +4,60 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "scene-graph/scene-graph.h"
 #include "thpool/thpool.h"
 
-SceneGraph* global_graph_context;
+typedef struct Arguments {
+    SceneGraph* graph;
+    SceneNode* nodes;
+    int nodes_count;
+} Arguments;
+
+typedef struct NodePos {
+    int node;
+    int layer;
+    float y;
+} NodePos;
 
 static int compare_by_y(const void* a, const void* b) {
-    const int* v1     = a;
-    const int* v2     = b;
-    SceneGraph* graph = (void*)global_graph_context;
-    int idx1          = scene_graph_index_get(graph, *v1);
-    int idx2          = scene_graph_index_get(graph, *v2);
-    const float ay    = graph->world_positions[idx1].y;
-    const float by    = graph->world_positions[idx2].y;
+    const NodePos* v1 = a;
+    const NodePos* v2 = b;
+    const float ay    = v1->y;
+    const float by    = v2->y;
 
     return (ay > by) - (ay < by);
 }
 
 static void sort_children(SceneGraph* graph, Node node) {
-    int count = 0;
-    int child = scene_graph_first_child_get(graph, node);
-
-    // First count children
-    while (child != NODE_NULL) {
-        child = scene_graph_sibling_get(graph, child);
-        count++;
-    }
+    int count = scene_graph_node_get(graph, node)->children_count;
 
     if (count > 0) {
-        int* nodes = malloc(count * sizeof(int));
+        NodePos* nodes = malloc(count * sizeof(NodePos));
         assert(nodes != NULL);
 
-        // Fill array
-        child = scene_graph_first_child_get(graph, node);
+        int child = scene_graph_first_child_get(graph, node);
         for (int i = 0; i < count; i++) {
-            nodes[i] = child;
-            child    = scene_graph_sibling_get(graph, child);
+            int index = scene_graph_index_get(graph, child);
+            nodes[i]  = (NodePos){
+                 .y    = graph->world_positions[index].y,
+                 .node = child,
+            };
+
+            child = scene_graph_sibling_get(graph, child);
         }
 
-        mergesort(nodes, count, sizeof(int), compare_by_y);
+        mergesort(nodes, count, sizeof(NodePos), compare_by_y);
 
         // Update links
         for (int i = 0; i < count - 1; i++) {
-            scene_graph_sibling_set(graph, nodes[i], nodes[i + 1]);
+            scene_graph_sibling_set(graph, nodes[i].node, nodes[i + 1].node);
         }
 
-        scene_graph_first_child_set(graph, node, nodes[0]);
-        scene_graph_sibling_set(graph, nodes[count - 1], NODE_NULL);
+        scene_graph_first_child_set(graph, node, nodes[0].node);
+        scene_graph_sibling_set(graph, nodes[count - 1].node, NODE_NULL);
 
         free(nodes);
     }
@@ -93,12 +95,6 @@ static void scene_graph_populate_array(SceneGraph* graph,
     }
 }
 
-typedef struct Arguments {
-    SceneGraph* graph;
-    SceneNode* nodes;
-    int nodes_count;
-} Arguments;
-
 static void scene_graph_parallel(void* arg) {
     Arguments* arguments = arg;
     SceneGraph* graph    = arguments->graph;
@@ -111,38 +107,25 @@ static void scene_graph_parallel(void* arg) {
 
 void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool) {
     assert(graph != NULL && "Graph cannot be NULL");
-    global_graph_context = graph;
 
-    int thread_init      = 5000;
-    int thread_count     = graph->nodes_count / thread_init;
-    Arguments args[thread_count + 1];
-    int offset = 0;
+    int thread_count = 8;
+    Arguments args[thread_count];
+    int nodes_per_thread = graph->nodes_count / thread_count;
+    int remaining_nodes  = graph->nodes_count % thread_count;
 
-    if (pool != NULL && thread_count > 0) {
-        // process nodes multithreaded
-        offset = thread_count * thread_init;
-        for (int i = 0; i < thread_count; i++) {
-            args[i] = (Arguments){
-                .nodes       = &graph->nodes[i * thread_init],
-                .nodes_count = thread_init,
-                .graph       = graph,
-            };
-
-            thpool_add_work(pool, scene_graph_parallel, &args[i]);
+    for (int i = 0; i < thread_count; i++) {
+        int thread_nodes = nodes_per_thread;
+        if (i == thread_count - 1) {
+            thread_nodes += remaining_nodes;
         }
 
-        args[thread_count] = (Arguments){
-            .nodes       = &graph->nodes[offset],
-            .nodes_count = graph->nodes_count - offset,
+        args[i] = (Arguments){
+            .nodes       = &graph->nodes[i * nodes_per_thread],
+            .nodes_count = thread_nodes,
             .graph       = graph,
         };
 
-        thpool_add_work(pool, scene_graph_parallel, &args[thread_count]);
-    } else {
-        // Process remaining nodes singlethreaded
-        for (int i = offset; i < graph->nodes_count; i++) {
-            sort_children(graph, graph->nodes[i].id);
-        }
+        thpool_add_work(pool, scene_graph_parallel, &args[i]);
     }
 
     // Now collect into temp arrays
