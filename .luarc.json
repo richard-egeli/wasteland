@@ -1,16 +1,15 @@
 {
-    "diagnostics.globals": [
-        "update",
-        "action_down",
-        "move_player",
-        "on_entity_spawn",
-        "create_entity",
-        "get_mouse_world_position",
-        "action_pressed",
-        "action_up",
-        "action_released",
-        "get_time",
-        "collision",
-        "load_level"
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "Lua 5.1",
+  "diagnostics": {
+    "globals": [
+      "Entity"
     ]
+  },
+  "workspace": {
+    "checkThirdParty": false,
+    "library": [
+      "./scripts"
+    ]
+  }
 }
