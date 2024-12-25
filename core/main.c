@@ -12,13 +12,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
+#include "box2d/box2d.h"
 #include "global.h"
-#include "level.h"
-#include "lua_funcs.h"
+#include "lua/asset_loader.h"
+#include "lua/world.h"
+#include "scene-graph/graph-sort.h"
+#include "scene-graph/parallel-graph-sort.h"
 #include "scene-graph/scene-graph.h"
 #include "texture.h"
-#include "ui/ui.h"
+#include "thpool/thpool.h"
 
 static void move_camera_left(void) {
     global.camera.target.x -= 3.0;
@@ -37,22 +41,31 @@ static void move_camera_down(void) {
 }
 
 static void lua_init(const char* file) {
-    global.state = luaL_newstate();
-    if (global.state == NULL) {
+    lua_State* L = luaL_newstate();
+    if (L == NULL) {
         fprintf(stderr, "Cannot create Lua state\n");
         exit(EXIT_FAILURE);
     }
 
-    luaL_openlibs(global.state);
-    lua_register_functions(global.state);
+    luaL_openlibs(L);
+    register_world_api(L);
+    register_asset_loader_api(L);
 
-    if (luaL_loadfile(global.state, file) != LUA_OK) {
-        fprintf(stderr, "Error: %s\n", lua_tostring(global.state, -1));
-        lua_close(global.state);
+    if (luaL_loadfile(L, "scripts/assets.lua") != LUA_OK) {
+        fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
+        lua_close(L);
         exit(EXIT_FAILURE);
     }
 
-    lua_pcall(global.state, 0, 0, 0);
+    lua_pcall(L, 0, 0, 0);
+
+    if (luaL_loadfile(L, file) != LUA_OK) {
+        fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
+        lua_close(L);
+        exit(EXIT_FAILURE);
+    }
+
+    lua_pcall(L, 0, 0, 0);
 }
 
 static void move_player(SceneGraph* graph, GameObject* object) {
@@ -89,7 +102,7 @@ static void draw_node(SceneGraph* graph, Drawable* drawable) {
     uint8_t r         = ((uint8_t*)drawable->data)[0];
     uint8_t g         = ((uint8_t*)drawable->data)[1];
     uint8_t b         = ((uint8_t*)drawable->data)[2];
-    DrawRectangle(position.x, position.y, 32, 32, (Color){r, g, b, 0xFF});
+    DrawRectangle(position.x, position.y, 8, 8, (Color){r, g, b, 0xFF});
 }
 
 static void move_node(SceneGraph* graph, GameObject* object) {
@@ -97,8 +110,8 @@ static void move_node(SceneGraph* graph, GameObject* object) {
     Position current = scene_graph_position_get(graph, object->node);
 
     // Define boundaries for the movement
-    const int width_max  = 1280 - 16;  // Minus size of the node
-    const int height_max = 720 - 16;   // Minus size of the node
+    const int width_max  = 1280 - 8;  // Minus size of the node
+    const int height_max = 720 - 8;   // Minus size of the node
 
     // Generate random deltas for movement
     int dx = (rand() % 7) - 3;  // Random value between -3 and +3
@@ -124,126 +137,37 @@ int main(void) {
 
     texture_init();
 
-    SceneGraph* graph      = scene_graph_new();
-    Node root              = scene_graph_node_new(graph, NODE_NULL);
-    Node player            = scene_graph_node_new(graph, root);
-    GameObject* player_obj = scene_graph_game_object_new(graph, player);
-    Drawable* player_draw  = scene_graph_drawable_new(graph, player);
-
-    Node child             = scene_graph_node_new(graph, player);
-    Drawable* child_draw   = scene_graph_drawable_new(graph, child);
-    scene_graph_position_set(graph, child, (Position){0, 40});
-
-    player_obj->update = move_player;
-    player_draw->draw  = draw_player;
-    child_draw->draw   = draw_child;
-
-    for (int i = 0; i < 24; i++) {
-        Node node       = scene_graph_node_new(graph, root);
-        Drawable* draw  = scene_graph_drawable_new(graph, node);
-        GameObject* obj = scene_graph_game_object_new(graph, node);
-
-        int x           = rand() % 1266;
-        int y           = rand() % 704;
-
-        scene_graph_position_set(graph, node, (Position){x, y});
-        // obj->update = move_node;
-        draw->draw = draw_node;
-        draw->data = malloc(3);
-        uint8_t* v = (uint8_t*)draw->data;
-        v[0]       = rand() % 256;
-        v[1]       = rand() % 256;
-        v[2]       = rand() % 256;
-    }
-
-    scene_graph_compute_positions(graph);
-
-    while (!WindowShouldClose()) {
-        scene_graph_update(graph);
-        scene_graph_compute_positions(graph);
-
-        BeginDrawing();
-        ClearBackground(WHITE);
-        scene_graph_render(graph);
-        EndDrawing();
-    }
-
-    global.camera.offset   = (Vector2){0};
-    global.camera.target   = (Vector2){0};
-    global.camera.rotation = 0;
-    global.camera.zoom     = 2.0;
-
-    // NOTE: fix for blending of alpha colors on render textures
-    rlSetBlendFactorsSeparate(0x0302, 0x0303, 1, 0x0303, 0x8006, 0x8006);
-
-    RenderTexture rt = LoadRenderTexture(1280, 720);
     lua_init("scripts/main.lua");
 
-    UI_Base* ui_base      = (void*)ui_new(UI_TYPE_BASE);
-    UI_Button* ui_host    = (void*)ui_new(UI_TYPE_BUTTON);
-    UI_Button* ui_client  = (void*)ui_new(UI_TYPE_BUTTON);
+    for (int i = 0; i < worlds_count; i++) {
+        scene_graph_compute_positions(worlds[i]);
+    }
 
-    ui_host->base.texture = texture_load("assets/button.png");
-    /*ui_host->onclick        = setup_host;*/
+    uint64_t count       = 0;
+    double total_time    = 0.0;
 
-    ui_client->base.texture = texture_load("assets/button.png");
-    /*ui_client->onclick      = setup_client;*/
-    ui_client->base.y = 64;
-
-    ui_addchild(ui_base, (void*)ui_host);
-    ui_addchild(ui_base, (void*)ui_client);
+    threadpool pool      = thpool_init(16);
+    b2WorldDef world_def = b2DefaultWorldDef();
+    b2WorldId world      = b2CreateWorld(&world_def);
 
     while (!WindowShouldClose()) {
-        if (IsKeyDown(KEY_UP)) move_camera_up();
-        if (IsKeyDown(KEY_DOWN)) move_camera_down();
-        if (IsKeyDown(KEY_LEFT)) move_camera_left();
-        if (IsKeyDown(KEY_RIGHT)) move_camera_right();
-
-        if (IsMouseButtonPressed(0)) {
-            float x = GetMouseX() / global.camera.zoom;
-            float y = GetMouseY() / global.camera.zoom;
-            ui_onclick(ui_base, x, y);
+        for (int i = 0; i < worlds_count; i++) {
+            scene_graph_update(worlds[i]);
+            scene_graph_compute_positions(worlds[i]);
+            scene_graph_ysort_parallel(worlds[i], pool);
         }
-
-        lua_getglobal(global.state, "update");
-        if (lua_isfunction(global.state, -1)) {
-            lua_pushnumber(global.state, GetFrameTime());
-            if (lua_pcall(global.state, 1, 0, 0) != LUA_OK) {
-                fprintf(stderr, "Error: %s\n", lua_tostring(global.state, -1));
-            }
-        } else {
-            lua_pop(global.state, -1);
-        }
-
-        Position pos = scene_graph_position_get(graph, player);
-
-        scene_graph_position_set(graph, root, (Position){pos.x + 0.1f, 0.0f});
-
-        scene_graph_update(graph);
-        scene_graph_compute_positions(graph);
 
         BeginDrawing();
         ClearBackground(WHITE);
 
-        BeginMode2D(global.camera);
-        BeginBlendMode(BLEND_CUSTOM_SEPARATE);
-        Rectangle src = {0, 0, rt.texture.width, -rt.texture.height};
-        Rectangle dst = {0, 0, GetScreenWidth(), GetScreenHeight()};
-
-        if (global.level) {
-            level_update(global.level);
+        for (int i = 0; i < worlds_count; i++) {
+            scene_graph_render(worlds[i]);
         }
 
-        DrawTexturePro(rt.texture, src, dst, (Vector2){0}, 0, WHITE);
-        DrawFPS(0, 0);
-
-        EndBlendMode();
-        EndMode2D();
-
+        DrawFPS(10, 10);
         EndDrawing();
     }
 
-    lua_close(global.state);
     texture_free();
     CloseWindow();
 }
