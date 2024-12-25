@@ -241,6 +241,14 @@ SceneGraph *scene_graph_new(void) {
         graph->node_indices[i]        = NODE_NULL;
         graph->drawable_indices[i]    = NODE_NULL;
         graph->game_object_indices[i] = NODE_NULL;
+        graph->nodes[i]               = (SceneNode){
+                          .id             = NODE_NULL,
+                          .parent         = NODE_NULL,
+                          .first_child    = NODE_NULL,
+                          .next_sibling   = NODE_NULL,
+                          .children_count = 0,
+                          .layer          = 0,
+        };
     }
 
     return graph;

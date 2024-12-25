@@ -21,6 +21,16 @@ typedef struct Position {
     float y;
 } Position;
 
+typedef struct Sprite {
+    int node;
+    unsigned int id;
+    unsigned int width;
+    unsigned int height;
+    unsigned int rows;
+    unsigned int cols;
+    unsigned int cell;
+} Sprite;
+
 typedef struct SceneNode {
     int id;
     int parent;
@@ -66,13 +76,11 @@ typedef struct SceneGraph {
     // NOTE: Game Objects
     GameObject game_objects[MAX_NODES];
     int game_object_indices[MAX_NODES];
-    int game_objects_next_index;
     int game_objects_count;
 
     // NOTE: Drawables
     Drawable drawables[MAX_NODES];
     int drawable_indices[MAX_NODES];
-    int drawables_next_index;
     int drawables_count;
 
     // NOTE: Destruction Queue

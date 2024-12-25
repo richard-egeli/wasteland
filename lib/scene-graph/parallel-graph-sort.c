@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -28,7 +29,11 @@ static int compare_by_y(const void* a, const void* b) {
     const float ay    = v1->y;
     const float by    = v2->y;
 
-    return (ay > by) - (ay < by);
+    if (v1->layer != v2->layer) {
+        return v1->layer - v2->layer;
+    }
+
+    return (v1->y > v2->y) - (v1->y < v2->y);
 }
 
 static void sort_children(SceneGraph* graph, Node node) {
@@ -40,10 +45,10 @@ static void sort_children(SceneGraph* graph, Node node) {
 
         int child = scene_graph_first_child_get(graph, node);
         for (int i = 0; i < count; i++) {
-            int index = scene_graph_index_get(graph, child);
-            nodes[i]  = (NodePos){
-                 .y    = graph->world_positions[index].y,
-                 .node = child,
+            nodes[i] = (NodePos){
+                .y     = scene_graph_position_get(graph, child).y,
+                .layer = scene_graph_layer_get(graph, child),
+                .node  = child,
             };
 
             child = scene_graph_sibling_get(graph, child);
@@ -138,7 +143,7 @@ void scene_graph_ysort_parallel(SceneGraph* graph, threadpool pool) {
 
     thpool_wait(pool);
 
-    scene_graph_populate_array(graph, 0, temp_nodes, &temp_node_count);
+    scene_graph_populate_array(graph, graph->nodes[0].id, temp_nodes, &temp_node_count);
 
     for (int i = 0; i < temp_node_count; i++) {
         int old_node_idx = scene_graph_index_get(graph, temp_nodes[i].id);
