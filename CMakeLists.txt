@@ -39,12 +39,15 @@ add_executable(${PROJECT_NAME}
   core/src/entity.c
   core/src/texture.c
   core/src/tilemap.c
-  core/src/lua_funcs.c 
-  core/src/lua_entity.c
-  core/src/lua_level.c
-  core/src/lua_helper.c
-  core/src/lua_camera.c
-  core/src/lua_action.c
+  core/src/spritesheet.c
+
+  # New
+  core/src/assets.c
+
+  # Lua
+  core/src/lua/world.c
+  core/src/lua/asset_loader.c
+  core/src/lua/sprite.c
 )
 
 include(cmake/lua.cmake)
