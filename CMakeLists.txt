@@ -48,6 +48,8 @@ add_executable(${PROJECT_NAME}
   core/src/lua/world.c
   core/src/lua/asset_loader.c
   core/src/lua/sprite.c
+  core/src/lua/input.c
+  core/src/lua/entity.c
 )
 
 include(cmake/lua.cmake)
