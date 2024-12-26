@@ -3,14 +3,24 @@
 ---@meta
 
 ---@class Entity
+---@field get_position fun(self:Entity): x:number, y:number
+---@field set_position fun(self:Entity, x:number,y:number)
+
+---@class EntityDef
+---@field sprite? number
 ---@field load? fun(self: Entity)
 ---@field update? fun(self: Entity)
----@field render? fun(self:Entity)
 ---@field parent? Entity
 
 ---@class World
 ---@field new fun(): World
----@field create_entity fun(self:World, entity: Entity): Entity
+---@field create_entity fun(self:World, entity: EntityDef): any
+
+---@class Input
+---@field is_down fun(key:integer): boolean
+---@field is_up fun(key:integer):boolean
+---@field is_pressed fun(key:integer):boolean
+---@field is_released fun(key:integer):boolean
 
 ---@class AnimationFrame
 ---@field column integer
@@ -31,3 +41,6 @@ World = {}
 
 ---@type AssetLoader
 AssetLoader = {}
+
+---@type Input
+Input = {}
