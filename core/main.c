@@ -40,6 +40,13 @@ static void move_camera_down(void) {
     global.camera.target.y += 3.0;
 }
 
+static int error_handler(lua_State* L) {
+    const char* msg = lua_tostring(L, 1);
+    luaL_traceback(L, L, msg, 1);  // This adds the stack trace
+    fprintf(stderr, "Lua Error: %s\n", lua_tostring(L, -1));
+    return 1;
+}
+
 static void lua_init(const char* file) {
     lua_State* L = luaL_newstate();
     if (L == NULL) {
@@ -51,13 +58,16 @@ static void lua_init(const char* file) {
     register_world_api(L);
     register_asset_loader_api(L);
 
+    lua_pushcfunction(L, error_handler);  // Push error handler
+    int error_handler_index = lua_gettop(L);
+
     if (luaL_loadfile(L, "scripts/assets.lua") != LUA_OK) {
         fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
         lua_close(L);
         exit(EXIT_FAILURE);
     }
 
-    lua_pcall(L, 0, 0, 0);
+    lua_pcall(L, 0, 0, error_handler_index);
 
     if (luaL_loadfile(L, file) != LUA_OK) {
         fprintf(stderr, "Error: %s\n", lua_tostring(L, -1));
@@ -65,7 +75,7 @@ static void lua_init(const char* file) {
         exit(EXIT_FAILURE);
     }
 
-    lua_pcall(L, 0, 0, 0);
+    lua_pcall(L, 0, 0, error_handler_index);
 }
 
 static void move_player(SceneGraph* graph, GameObject* object) {
