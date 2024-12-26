@@ -21,16 +21,6 @@ typedef struct Position {
     float y;
 } Position;
 
-typedef struct Sprite {
-    int node;
-    unsigned int id;
-    unsigned int width;
-    unsigned int height;
-    unsigned int rows;
-    unsigned int cols;
-    unsigned int cell;
-} Sprite;
-
 typedef struct SceneNode {
     int id;
     int parent;
