@@ -210,8 +210,6 @@ static int entity_index(lua_State* L) {
     }
     lua_pop(L, 2);  // Pop nil and metatable
 
-    // Not a method, look up in the table itself
-    // (since your original code stores properties directly in the table)
     lua_pushvalue(L, 2);
     lua_gettable(L, 1);
 
