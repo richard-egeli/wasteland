@@ -70,5 +70,5 @@ local human_animations = {
 	},
 }
 
-PLAYER_SPRITE = AssetLoader.load_spritesheet("assets/sprite/character_1-8.png", 12, 9, human_animations)
-CHAR_SPRITE = AssetLoader.load_spritesheet("assets/sprite/character_17-24.png", 12, 9, human_animations)
+PLAYER_SPRITE = AssetLoader.load_spritesheet("assets/sprite/character_1-8.png", 12, 8, human_animations)
+CHAR_SPRITE = AssetLoader.load_spritesheet("assets/sprite/character_17-24.png", 12, 8, human_animations)
