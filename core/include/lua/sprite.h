@@ -4,15 +4,18 @@
 typedef struct lua_State lua_State;
 
 typedef struct Sprite {
-    int cell_index;
-    int id;
-    int rows;
-    int cols;
+    int row;
+    int col;
+    int texture_id;
     int width;
     int height;
+    float step_x;
+    float step_y;
 } Sprite;
 
-int sprite_parse(lua_State* L, int idx);
+void sprite_draw(const Sprite* sprite, float x, float y);
+
+Sprite* sprite_parse(lua_State* L, int node, int idx);
 
 void sprite_register_api(lua_State* L);
 
