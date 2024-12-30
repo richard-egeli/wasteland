@@ -33,15 +33,7 @@ add_subdirectory(lib/thpool)
 
 add_executable(${PROJECT_NAME} 
   core/main.c 
-  core/src/level.c 
-  core/src/global.c 
-  core/src/action.c 
-  core/src/entity.c
-  core/src/texture.c
-  core/src/tilemap.c
   core/src/spritesheet.c
-
-  # New
   core/src/assets.c
 
   # Lua
@@ -53,6 +45,7 @@ add_executable(${PROJECT_NAME}
   core/src/lua/utils.c
   core/src/lua/dynamic_body.c
   core/src/lua/static_body.c
+  core/src/lua/event_handler.c
 )
 
 include(cmake/lua.cmake)
