@@ -14,15 +14,14 @@
 #include <unistd.h>
 
 #include "box2d/box2d.h"
-#include "global.h"
 #include "lua/asset_loader.h"
 #include "lua/dynamic_body.h"
 #include "lua/entity.h"
+#include "lua/event_handler.h"
 #include "lua/input.h"
 #include "lua/world.h"
 #include "scene-graph/parallel-graph-sort.h"
 #include "scene-graph/scene-graph.h"
-#include "texture.h"
 #include "thpool/thpool.h"
 
 static int error_handler(lua_State* L) {
@@ -71,31 +70,24 @@ int main(void) {
     SetTargetFPS(60);
     srand((unsigned)time(NULL));
 
-    texture_init();
-
     lua_init("scripts/main.lua");
 
     for (int i = 0; i < worlds_count; i++) {
         scene_graph_compute_positions(worlds[i]->graph);
     }
 
-    uint64_t count    = 0;
-    double total_time = 0.0;
-
-    threadpool pool   = thpool_init(16);
+    uint64_t count        = 0;
+    threadpool pool       = thpool_init(16);
+    const float time_step = 1.0f / 60.0f;
 
     while (!WindowShouldClose()) {
         for (int i = 0; i < worlds_count; i++) {
             scene_graph_update(worlds[i]->graph);
 
-            b2World_Step(worlds[i]->id, GetFrameTime(), 4);
-            for (int j = 0; j < dynamic_body_movements_length; j++) {
-                Movement m = dynamic_body_movements[j];
-                b2Vec2 p   = b2Body_GetPosition(m.body_id);
-                scene_graph_position_set(worlds[i]->graph, m.node, (Position){p.x, p.y});
-            }
-
-            dynamic_body_movements_length = 0;
+            b2World_Step(worlds[i]->id, time_step, 8);
+            handle_collision_enter_events(worlds[i]);
+            handle_collision_exit_events(worlds[i]);
+            handle_movement_events(worlds[i]);
 
             scene_graph_compute_positions(worlds[i]->graph);
             scene_graph_ysort_parallel(worlds[i]->graph, pool);
@@ -112,6 +104,5 @@ int main(void) {
         EndDrawing();
     }
 
-    texture_free();
     CloseWindow();
 }
