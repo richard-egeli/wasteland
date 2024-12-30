@@ -8,6 +8,14 @@ local ent = world:create_dynamic_body({
 	health = 90,
 	sprite = PLAYER_SPRITE,
 
+	on_collision_enter = function(self, other)
+		print("Collision Entered!", other.name)
+	end,
+
+	on_collision_exit = function(self, other)
+		print("Collision Exited!", other.name)
+	end,
+
 	---@param self Player
 	update = function(self)
 		local speed = 50.0
@@ -34,6 +42,7 @@ local ent = world:create_dynamic_body({
 })
 
 world:create_static_body({
+	name = "St John",
 	x = 64,
 	y = 0,
 })
