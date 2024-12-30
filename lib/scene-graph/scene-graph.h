@@ -28,6 +28,7 @@ typedef struct SceneNode {
     int next_sibling;
     int children_count;
     int layer;
+    void* userdata;
 } SceneNode;
 
 typedef struct GameObject {
@@ -107,6 +108,16 @@ static inline void scene_graph_index_set(SceneGraph* graph, Node node, int index
 static inline int scene_graph_node_child_count(const SceneGraph* graph, Node node) {
     int index = scene_graph_index_get(graph, node);
     return graph->nodes[index].children_count;
+}
+
+static inline void* scene_graph_userdata_get(SceneGraph* graph, Node node) {
+    int index = scene_graph_index_get(graph, node);
+    return graph->nodes[index].userdata;
+}
+
+static inline void scene_graph_userdata_set(SceneGraph* graph, Node node, void* userdata) {
+    int index                    = scene_graph_index_get(graph, node);
+    graph->nodes[index].userdata = userdata;
 }
 
 static inline int scene_graph_layer_set(SceneGraph* graph, Node node, int layer) {

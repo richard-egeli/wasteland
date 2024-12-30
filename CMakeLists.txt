@@ -50,6 +50,9 @@ add_executable(${PROJECT_NAME}
   core/src/lua/sprite.c
   core/src/lua/input.c
   core/src/lua/entity.c
+  core/src/lua/utils.c
+  core/src/lua/dynamic_body.c
+  core/src/lua/static_body.c
 )
 
 include(cmake/lua.cmake)

@@ -12,9 +12,15 @@
 ---@field update? fun(self: Entity)
 ---@field parent? Entity
 
+---@class DynamicBodyDef
+---@field x number
+---@field y number
+---@field parent? any
+
 ---@class World
 ---@field new fun(): World
 ---@field create_entity fun(self:World, entity: EntityDef): any
+---@field create_dynamic_body fun(self:World, definition: DynamicBodyDef): any
 
 ---@class Input
 ---@field is_down fun(key:integer): boolean

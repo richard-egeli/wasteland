@@ -4,14 +4,14 @@ local world = World.new()
 
 ---@class Player : Entity
 ---@field health number
-local ent = world:create_entity({
+local ent = world:create_dynamic_body({
 	health = 90,
 	sprite = PLAYER_SPRITE,
 
 	---@param self Player
 	update = function(self)
-		local speed = 5.0
-		local x, y = self:get_position()
+		local speed = 50.0
+		local x, y = 0, 0
 
 		if Input.is_down(KeyboardKey.W) then
 			y = y - speed
@@ -29,16 +29,11 @@ local ent = world:create_entity({
 			x = x + speed
 		end
 
-		self:set_position(x, y)
+		self:move(x, y)
 	end,
 })
 
-ent:set_position(50, 50)
-print(ent:get_position())
-
--- local child = world:create_entity({
--- 	parent = ent,
--- 	update = function()
--- 		print("Child")
--- 	end,
--- })
+world:create_static_body({
+	x = 64,
+	y = 0,
+})
