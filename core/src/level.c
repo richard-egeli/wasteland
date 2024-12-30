@@ -7,10 +7,8 @@
 #include "array/array.h"
 #include "collision/box_collider.h"
 #include "collision/sparse_grid.h"
-#include "entity.h"
 #include "global.h"
 #include "ldtk/ldtk.h"
-#include "lua_entity.h"
 #include "tilemap.h"
 
 void level_entities_load(Level* level, const char* key, entity_callback cb) {
