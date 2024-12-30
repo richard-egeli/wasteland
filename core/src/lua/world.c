@@ -22,15 +22,17 @@ size_t worlds_count = 0;
 static int create_world(lua_State* L) {
     World* world = malloc(sizeof(*world));
     assert(world != NULL && "World cannot be NULL!");
-    SceneGraph* graph      = scene_graph_new();
-    World** world_ptr      = lua_newuserdata(L, sizeof(World*));
+    SceneGraph* graph    = scene_graph_new();
+    World** world_ptr    = lua_newuserdata(L, sizeof(World*));
 
-    b2WorldDef world_def   = b2DefaultWorldDef();
-    world_def.gravity      = (b2Vec2){0, 0};
-    b2WorldId id           = b2CreateWorld(&world_def);
+    b2WorldDef world_def = b2DefaultWorldDef();
+    world_def.gravity    = (b2Vec2){0, 0};
+    b2WorldId id         = b2CreateWorld(&world_def);
+    scene_graph_node_new(graph, NODE_NULL);
 
     world->id              = id;
     world->graph           = graph;
+    world->L               = L;
     *world_ptr             = world;
     worlds[worlds_count++] = world;
 

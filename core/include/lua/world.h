@@ -12,6 +12,7 @@ typedef struct lua_State lua_State;
 typedef struct World {
     b2WorldId id;
     SceneGraph* graph;
+    lua_State* L;
 } World;
 
 extern World* worlds[1024];
