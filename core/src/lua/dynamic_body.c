@@ -11,26 +11,21 @@
 #include "lua/sprite.h"
 #include "lua/utils.h"
 #include "lua/world.h"
-
-Movement dynamic_body_movements[1024];
-size_t dynamic_body_movements_length;
+#include "scene-graph/scene-graph.h"
 
 int dynamic_body_move(lua_State* L) {
     assert(lua_isuserdata(L, 1) && "Userdata cannot be NULL");
     assert(lua_isnumber(L, 2) && "X coordinate invalid");
     assert(lua_isnumber(L, 3) && "Y coordinate invalid");
 
-    DynamicBody* body = *(DynamicBody**)lua_touserdata(L, 1);
-    float x           = lua_tonumber(L, 2);
-    float y           = lua_tonumber(L, 3);
+    Entity* entity = *(Entity**)lua_touserdata(L, 1);
+    assert(entity->type == ENTITY_TYPE_DYNAMIC_BODY && "Entity type is wrong");
 
-    b2WorldId id      = body->entity.weak_world_ptr->id;
-    b2Body_SetLinearVelocity(body->id, (b2Vec2){x, y});
-    dynamic_body_movements[dynamic_body_movements_length++] = (Movement){
-        .body_id = body->id,
-        .node    = body->entity.node,
-    };
+    float x      = lua_tonumber(L, 2);
+    float y      = lua_tonumber(L, 3);
 
+    b2WorldId id = entity->weak_world_ptr->id;
+    b2Body_SetLinearVelocity(entity->dynamic_body.id, (b2Vec2){x, y});
     return 0;
 }
 
@@ -53,27 +48,45 @@ int dynamic_body_create(lua_State* L) {
     b2ShapeDef shape       = b2DefaultShapeDef();
     b2CreatePolygonShape(body_id, &shape, &box);
 
-    DynamicBody* body = malloc(sizeof(*body));
-    assert(body != NULL && "Body cannot be NULL!");
+    Entity* entity = malloc(sizeof(*entity));
+    assert(entity != NULL && "entity cannot be NULL!");
 
-    body->id               = body_id;
+    entity->type                                = ENTITY_TYPE_DYNAMIC_BODY;
+    entity->dynamic_body.id                     = body_id;
+    entity->dynamic_body.on_collision_enter_ref = -1;
+    entity->dynamic_body.on_collision_exit_ref  = -1;
+    b2Body_SetUserData(body_id, entity);
 
-    DynamicBody** body_ptr = lua_newuserdata(L, sizeof(*body_ptr));
-    *body_ptr              = body;
+    lua_getfield(L, 2, "on_collision_enter");
+    if (lua_isfunction(L, -1)) {
+        entity->dynamic_body.on_collision_enter_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pop(L, 1);
+    }
 
-    entity_setup(L, &body->entity, 2);
+    lua_getfield(L, 2, "on_collision_exit");
+    if (lua_isfunction(L, -1)) {
+        entity->dynamic_body.on_collision_exit_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    } else {
+        lua_pop(L, 1);
+    }
 
-    Sprite* sprite = sprite_parse(L, body->entity.node, 2);
+    Entity** entity_ptr = lua_newuserdata(L, sizeof(*entity));
+    *entity_ptr         = entity;
+
+    entity_setup(L, entity, 2);
+
+    Sprite* sprite = sprite_parse(L, entity->node, 2);
     if (sprite != NULL) {
-        Drawable* draw = scene_graph_drawable_new(world->graph, body->entity.node);
+        Drawable* draw = scene_graph_drawable_new(world->graph, entity->node);
         draw->data     = sprite;
         draw->draw     = draw_sprite;
     }
-    entity_setup_update(L, &body->entity, 2);
+    entity_setup_update(L, entity, 2);
 
     setup_metatable(L, "DynamicBody", 2, NULL, 0);
     lua_pushvalue(L, -1);
-    body->entity.self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
     return 1;
 }

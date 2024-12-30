@@ -4,24 +4,15 @@
 #include <stddef.h>
 
 #include "box2d/id.h"
-#include "entity.h"
-#include "scene-graph/scene-graph.h"
 
 typedef struct World World;
 typedef struct lua_State lua_State;
 
 typedef struct DynamicBody {
     b2BodyId id;
-    Entity entity;
+    int on_collision_enter_ref;
+    int on_collision_exit_ref;
 } DynamicBody;
-
-typedef struct Movement {
-    Node node;
-    b2BodyId body_id;
-} Movement;
-
-extern Movement dynamic_body_movements[1024];
-extern size_t dynamic_body_movements_length;
 
 int dynamic_body_create(lua_State* L);
 
