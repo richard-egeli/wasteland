@@ -3,11 +3,18 @@
 
 #include <stddef.h>
 
+#include "box2d/id.h"
+
 typedef struct SceneGraph SceneGraph;
 
 typedef struct lua_State lua_State;
 
-extern SceneGraph* worlds[1024];
+typedef struct World {
+    b2WorldId id;
+    SceneGraph* graph;
+} World;
+
+extern World* worlds[1024];
 extern size_t worlds_count;
 
 void register_world_api(lua_State* L);
