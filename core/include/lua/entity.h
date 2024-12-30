@@ -1,11 +1,18 @@
 #ifndef CORE_INCLUDE_LUA_ENTITY_H_
 #define CORE_INCLUDE_LUA_ENTITY_H_
 
+#include "lua/dynamic_body.h"
+#include "lua/static_body.h"
 typedef struct lua_State lua_State;
 
 typedef struct GameObject GameObject;
 typedef struct SceneGraph SceneGraph;
 typedef struct World World;
+
+typedef enum EntityType {
+    ENTITY_TYPE_DYNAMIC_BODY,
+    ENTITY_TYPE_STATIC_BODY,
+} EntityType;
 
 typedef struct Entity {
     int node;
@@ -13,6 +20,11 @@ typedef struct Entity {
     int update_ref;
     lua_State* L;
     World* weak_world_ptr;
+    EntityType type;
+    union {
+        DynamicBody dynamic_body;
+        StaticBody static_body;
+    };
 } Entity;
 
 void entity_call_update(SceneGraph* graph, GameObject* object);

@@ -1,11 +1,15 @@
 #include "lua/static_body.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 #include "box2d/box2d.h"
 #include "box2d/collision.h"
 #include "box2d/types.h"
+#include "lauxlib.h"
 #include "lua.h"
+#include "lua/entity.h"
+#include "lua/utils.h"
 #include "lua/world.h"
 
 int static_body_create(lua_State* L) {
@@ -30,7 +34,22 @@ int static_body_create(lua_State* L) {
 
     b2Polygon box          = b2MakeBox(16, 16);
     b2ShapeDef shape       = b2DefaultShapeDef();
+    shape.isSensor         = true;
+
     b2CreatePolygonShape(body_id, &shape, &box);
+
+    Entity* entity = malloc(sizeof(*entity));
+    assert(entity != NULL && "Entity cannot be NULL");
+
+    entity->static_body.id = body_id;
+    entity->type           = ENTITY_TYPE_STATIC_BODY;
+    b2Body_SetUserData(body_id, entity);
+
+    entity_setup(L, entity, 2);
+    entity_setup_update(L, entity, 2);
+    setup_metatable(L, "Entity", 2, NULL, 0);
+    lua_pushvalue(L, -1);
+    entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
     return 1;
 }

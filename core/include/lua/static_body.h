@@ -7,7 +7,6 @@ typedef struct lua_State lua_State;
 
 typedef struct StaticBody {
     b2BodyId id;
-    int node;
 } StaticBody;
 
 int static_body_create(lua_State* L);
