@@ -78,7 +78,7 @@ void entity_call_update(SceneGraph* graph, GameObject* object) {
 
 int entity_get_parent_id(lua_State* L, int idx) {
     lua_getfield(L, idx, "parent");
-    int parent_id = NODE_NULL;
+    int parent_id = NODE_ROOT;
 
     if (!lua_isnil(L, -1) && lua_isuserdata(L, -1)) {
         Entity** parent_ptr = lua_touserdata(L, -1);
@@ -109,8 +109,8 @@ void entity_call_load(lua_State* L, Entity* entity, int world_idx) {
     if (lua_isfunction(L, -1)) {
         lua_pushvalue(L, world_idx);
         if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-            fprintf(stderr, "Error calling Lua function: %s\n", lua_tostring(entity->L, -1));
-            lua_pop(entity->L, 1);
+            fprintf(stderr, "Error calling Lua function: %s\n", lua_tostring(L, -1));
+            lua_pop(L, 1);
         }
     }
 }
