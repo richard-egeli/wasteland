@@ -8,6 +8,7 @@
 
 #define MAX_NODES 32768
 #define NODE_NULL -1
+#define NODE_ROOT 0
 
 #define NODE_WORLD 0
 #define NODE_LOCAL 1
