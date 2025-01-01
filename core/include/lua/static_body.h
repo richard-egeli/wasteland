@@ -7,6 +7,8 @@ typedef struct lua_State lua_State;
 
 typedef struct StaticBody {
     b2BodyId id;
+    int on_collision_enter_ref;
+    int on_collision_exit_ref;
 } StaticBody;
 
 int static_body_create(lua_State* L);
