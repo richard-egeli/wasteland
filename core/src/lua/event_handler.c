@@ -10,6 +10,28 @@
 #include "lua/world.h"
 #include "scene-graph/scene-graph.h"
 
+static int get_collision_enter_ref(Entity* entity) {
+    switch (entity->type) {
+        case ENTITY_TYPE_DYNAMIC_BODY:
+            return entity->dynamic_body.on_collision_enter_ref;
+        case ENTITY_TYPE_STATIC_BODY:
+            return entity->static_body.on_collision_enter_ref;
+    }
+
+    assert("Invalid entity type for collision event");
+}
+
+static int get_collision_exit_ref(Entity* entity) {
+    switch (entity->type) {
+        case ENTITY_TYPE_DYNAMIC_BODY:
+            return entity->dynamic_body.on_collision_exit_ref;
+        case ENTITY_TYPE_STATIC_BODY:
+            return entity->static_body.on_collision_exit_ref;
+    }
+
+    assert("Invalid entity type for collision event");
+}
+
 void handle_collision_enter_events(World* world) {
     lua_State* L          = world->L;
     b2SensorEvents events = b2World_GetSensorEvents(world->id);
@@ -22,20 +44,17 @@ void handle_collision_enter_events(World* world) {
         Entity* sensor              = b2Body_GetUserData(b1);
         Entity* entity              = b2Body_GetUserData(b2);
 
-        if (entity->type == ENTITY_TYPE_DYNAMIC_BODY) {
-            int ref = entity->dynamic_body.on_collision_enter_ref;
+        int ref                     = get_collision_enter_ref(sensor);
+        if (ref != -1) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+            assert(lua_isfunction(L, -1) && "Not a valid function");
 
-            if (ref != -1) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-                assert(lua_isfunction(L, -1) && "Not a valid function");
-
-                lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
-                lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
-                if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-                    // Handle error
-                    printf("Lua error: %s\n", lua_tostring(L, -1));
-                    lua_pop(L, 1);  // Remove error message
-                }
+            lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
+            if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+                // Handle error
+                printf("Lua error: %s\n", lua_tostring(L, -1));
+                lua_pop(L, 1);  // Remove error message
             }
         }
     }
@@ -44,7 +63,6 @@ void handle_collision_enter_events(World* world) {
 void handle_collision_exit_events(World* world) {
     lua_State* L          = world->L;
     b2SensorEvents events = b2World_GetSensorEvents(world->id);
-
     b2BodyEvents evt      = b2World_GetBodyEvents(world->id);
 
     for (int i = 0; i < events.endCount; i++) {
@@ -55,20 +73,17 @@ void handle_collision_exit_events(World* world) {
         Entity* sensor            = b2Body_GetUserData(b1);
         Entity* entity            = b2Body_GetUserData(b2);
 
-        if (entity->type == ENTITY_TYPE_DYNAMIC_BODY) {
-            int ref = entity->dynamic_body.on_collision_exit_ref;
+        int ref                   = get_collision_exit_ref(sensor);
+        if (ref != -1) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+            assert(lua_isfunction(L, -1) && "Not a valid function");
 
-            if (ref != -1) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-                assert(lua_isfunction(L, -1) && "Not a valid function");
-
-                lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
-                lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
-                if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-                    // Handle error
-                    printf("Lua error: %s\n", lua_tostring(L, -1));
-                    lua_pop(L, 1);  // Remove error message
-                }
+            lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
+            if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+                // Handle error
+                printf("Lua error: %s\n", lua_tostring(L, -1));
+                lua_pop(L, 1);  // Remove error message
             }
         }
     }
