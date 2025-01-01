@@ -19,6 +19,8 @@
 #include "lua/entity.h"
 #include "lua/event_handler.h"
 #include "lua/input.h"
+#include "lua/sprite.h"
+#include "lua/static_body.h"
 #include "lua/world.h"
 #include "scene-graph/parallel-graph-sort.h"
 #include "scene-graph/scene-graph.h"
@@ -44,6 +46,8 @@ static void lua_init(const char* file) {
     register_input_api(L);
     register_entity_api(L);
     register_dynamic_body_api(L);
+    register_static_body_api(L);
+    register_sprite_api(L);
 
     lua_pushcfunction(L, error_handler);  // Push error handler
     int error_handler_index = lua_gettop(L);
