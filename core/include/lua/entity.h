@@ -12,6 +12,7 @@ typedef struct World World;
 typedef enum EntityType {
     ENTITY_TYPE_DYNAMIC_BODY,
     ENTITY_TYPE_STATIC_BODY,
+    ENTITY_TYPE_SPRITE,
 } EntityType;
 
 typedef struct Entity {

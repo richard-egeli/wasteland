@@ -17,6 +17,8 @@ void sprite_draw(const Sprite* sprite, float x, float y);
 
 Sprite* sprite_parse(lua_State* L, int node, int idx);
 
-void sprite_register_api(lua_State* L);
+int sprite_create(lua_State* L);
+
+void register_sprite_api(lua_State* L);
 
 #endif  // CORE_INCLUDE_LUA_SPRITE_H_
