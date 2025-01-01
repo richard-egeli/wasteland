@@ -27,7 +27,7 @@ static void draw_sprite(SceneGraph* graph, Drawable* drawable) {
     sprite_draw(sprite, position.x, position.y);
 }
 
-static int set_position(lua_State* L) {
+int entity_set_position(lua_State* L) {
     assert(lua_gettop(L) == 3 && "Invalid arguments (entity, x, y)");
     assert(lua_isuserdata(L, 1) && "Invalid entity argument");
     assert(lua_isnumber(L, 2) && "Invalid X argument");
@@ -42,7 +42,7 @@ static int set_position(lua_State* L) {
     return 0;
 }
 
-static int get_position(lua_State* L) {
+int entity_get_position(lua_State* L) {
     assert(lua_gettop(L) == 1 && "Invalid arguments (entity)");
     assert(lua_isuserdata(L, 1) && "Invalid entity argument");
 
@@ -169,8 +169,8 @@ int entity_create(lua_State* L) {
 }
 
 static luaL_Reg entity_functions[] = {
-    {"set_position", set_position},
-    {"get_position", get_position},
+    {"set_position", entity_set_position},
+    {"get_position", entity_get_position},
     {NULL, NULL},
 };
 

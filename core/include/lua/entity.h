@@ -28,6 +28,10 @@ typedef struct Entity {
     };
 } Entity;
 
+int entity_set_position(lua_State* L);
+
+int entity_get_position(lua_State* L);
+
 void entity_call_update(SceneGraph* graph, GameObject* object);
 
 void entity_call_load(lua_State* L, Entity* entity, int idx);
