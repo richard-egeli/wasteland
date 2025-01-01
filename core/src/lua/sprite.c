@@ -120,6 +120,14 @@ int sprite_create(lua_State* L) {
     int row = lua_tointeger(L, -1);
     lua_pop(L, 1);
 
+    lua_getfield(L, 2, "x");
+    float x = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "y");
+    float y = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
     Entity* entity = malloc(sizeof(*entity));
     assert(entity != NULL && "Entity cannot be NULL");
 
@@ -132,8 +140,9 @@ int sprite_create(lua_State* L) {
     setup_metatable(L, "Sprite", 2, NULL, 0);
     lua_pushvalue(L, -1);
 
-    Sprite* sprite   = sprite_parse(L, entity->node, 2);
-    Drawable* draw   = scene_graph_drawable_new(world->graph, entity->node);
+    Sprite* sprite = sprite_parse(L, entity->node, 2);
+    Drawable* draw = scene_graph_drawable_new(world->graph, entity->node);
+    scene_graph_position_set(world->graph, entity->node, (Position){x, y});
 
     draw->data       = sprite;
     draw->draw       = sprite_draw_ptr;
@@ -171,6 +180,8 @@ static luaL_Reg sprite_func_api[] = {
     {"__newindex", sprite_newindex},
     {"__index", sprite_index},
     {"set_cell", sprite_set_cell},
+    {"set_position", entity_set_position},
+    {"get_position", entity_get_position},
     {NULL, NULL},
 };
 
