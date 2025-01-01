@@ -2,19 +2,10 @@ require("scripts/input")
 
 local world = World.new()
 
----@class Player : Entity
+---@class Player : Dynamic
 ---@field health number
 local ent = world:create_dynamic_body({
 	health = 90,
-	sprite = PLAYER_SPRITE,
-
-	on_collision_enter = function(self, other)
-		print("Collision Entered!", other.name)
-	end,
-
-	on_collision_exit = function(self, other)
-		print("Collision Exited!", other.name)
-	end,
 
 	---@param self Player
 	update = function(self)
@@ -41,8 +32,25 @@ local ent = world:create_dynamic_body({
 	end,
 })
 
-world:create_static_body({
+ent.children = {
+	sprite = world:create_sprite({
+		parent = ent,
+		sprite = PLAYER_SPRITE,
+		row = 0,
+		col = 0,
+	}),
+}
+
+local static = world:create_static_body({
 	name = "St John",
 	x = 64,
 	y = 0,
+
+	on_collision_enter = function(self, other)
+		print("Collision Entered!", self.name, other.health)
+	end,
+
+	on_collision_exit = function(self, other)
+		print("Collision Exited!", other.health)
+	end,
 })
