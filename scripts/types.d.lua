@@ -40,7 +40,7 @@
 ---@field on_collision_exit? fun(self:Static, other:any)
 
 ---@class World
----@field new fun(): World
+---@field children table
 ---@field create_entity fun(self:World, entity: EntityDef): any
 ---@field create_dynamic_body fun(self:World, definition: DynamicDef): any
 ---@field create_static_body fun(self:World, definition:StaticDef): any
@@ -66,7 +66,8 @@
 ---@class AssetLoader
 ---@field load_spritesheet fun(path:string, cols:number, rows:number, animations: Animation[]): number
 
----@type World
+---@class WorldAPI
+---@field new fun(): World
 World = {}
 
 ---@type AssetLoader
