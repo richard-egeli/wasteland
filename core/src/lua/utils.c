@@ -31,5 +31,11 @@ void setup_metatable(lua_State* L, const char* name, int idx, const char* filter
         }
         lua_pop(L, 1);
     }
+
+    // Create an empty table on the userdata named children
+    lua_pushstring(L, "children");
+    lua_newtable(L);
+    lua_settable(L, -3);
+
     lua_setfenv(L, -2);
 }

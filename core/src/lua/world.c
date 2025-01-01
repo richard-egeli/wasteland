@@ -39,6 +39,11 @@ static int create_world(lua_State* L) {
     luaL_getmetatable(L, "World");
     lua_setmetatable(L, -2);
 
+    // Create an empty table on the userdata named children
+    lua_pushstring(L, "children");
+    lua_newtable(L);
+    lua_settable(L, -3);
+
     return 1;
 }
 
