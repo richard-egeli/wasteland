@@ -42,20 +42,42 @@ static int create_world(lua_State* L) {
     return 1;
 }
 
+// Index/newindex handlers
+static int world_index(lua_State* L) {
+    luaL_getmetatable(L, "World");
+    lua_pushvalue(L, 2);
+    lua_rawget(L, -2);
+    if (!lua_isnil(L, -1)) return 1;
+    lua_pop(L, 2);
+
+    lua_getfenv(L, 1);
+    lua_pushvalue(L, 2);
+    lua_rawget(L, -2);
+    return 1;
+}
+
+static int world_newindex(lua_State* L) {
+    lua_getfenv(L, 1);
+    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 3);
+    lua_rawset(L, -3);
+    return 0;
+}
+
 static luaL_Reg world_functions[] = {
+    {"__index", world_index},
+    {"__newindex", world_newindex},
     {"new", create_world},
     {"create_entity", entity_create},
     {"create_dynamic_body", dynamic_body_create},
     {"create_static_body", static_body_create},
+    {"create_sprite", sprite_create},
     {NULL, NULL},
 };
 
 void register_world_api(lua_State* L) {
     // World API
     luaL_newmetatable(L, "World");
-
-    lua_pushvalue(L, -1);
-    lua_setfield(L, -2, "__index");
     luaL_setfuncs(L, world_functions, 0);
 
     lua_newtable(L);
