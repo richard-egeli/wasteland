@@ -13,19 +13,12 @@
 #include "scene-graph/scene-graph.h"
 
 static const char* standard_props[] = {
-    "sprite",
     "update",
     "parent",
     "load",
 };
 
 static const size_t standard_props_length = sizeof(standard_props) / sizeof(*standard_props);
-
-static void draw_sprite(SceneGraph* graph, Drawable* drawable) {
-    Sprite* sprite    = drawable->data;
-    Position position = scene_graph_position_get(graph, drawable->node);
-    sprite_draw(sprite, position.x, position.y);
-}
 
 int entity_set_position(lua_State* L) {
     assert(lua_gettop(L) == 3 && "Invalid arguments (entity, x, y)");
@@ -130,6 +123,8 @@ void entity_setup(lua_State* L, Entity* entity, int idx) {
     int parent_id = entity_get_parent_id(L, 2);
     entity->node  = scene_graph_node_new(graph, parent_id);
     assert(entity->node >= 0 && "Node cannot be INVALID");
+
+    scene_graph_userdata_set(graph, entity->node, entity);
 }
 
 int entity_create(lua_State* L) {
@@ -144,14 +139,15 @@ int entity_create(lua_State* L) {
     Entity* entity    = malloc(sizeof(Entity));
     assert(entity != NULL && "Entity cannot be NULL!");
 
-    entity_setup(L, entity, 2);
+    lua_getfield(L, 2, "x");
+    float x = lua_tonumber(L, -1);
+    lua_pop(L, 1);
 
-    Sprite* sprite = sprite_parse(L, entity->node, 2);
-    if (sprite != NULL) {
-        Drawable* draw = scene_graph_drawable_new(graph, entity->node);
-        draw->data     = sprite;
-        draw->draw     = draw_sprite;
-    }
+    lua_getfield(L, 2, "y");
+    float y = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
+    entity_setup(L, entity, 2);
 
     // Create and setup userdata
     Entity** entity_ptr = lua_newuserdata(L, sizeof(Entity*));
@@ -160,10 +156,9 @@ int entity_create(lua_State* L) {
     entity_setup_update(L, entity, 2);
     // entity_call_load(L, entity, 2);
     setup_metatable(L, "Entity", 2, standard_props, standard_props_length);
-
-    // Store reference to the fully setup userdata
-    lua_pushvalue(L, -1);
     entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    scene_graph_local_position_set(world->graph, entity->node, (Position){x, y});
 
     return 1;
 }
