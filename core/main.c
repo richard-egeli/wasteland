@@ -14,7 +14,9 @@
 #include <unistd.h>
 
 #include "box2d/box2d.h"
+#include "lua/animator.h"
 #include "lua/asset_loader.h"
+#include "lua/box_collider.h"
 #include "lua/dynamic_body.h"
 #include "lua/entity.h"
 #include "lua/event_handler.h"
@@ -47,6 +49,8 @@ static void lua_init(const char* file) {
     register_entity_api(L);
     register_dynamic_body_api(L);
     register_static_body_api(L);
+    register_box_collider_api(L);
+    register_animator_api(L);
     register_sprite_api(L);
 
     lua_pushcfunction(L, error_handler);  // Push error handler
@@ -71,6 +75,8 @@ static void lua_init(const char* file) {
 
 int main(void) {
     InitWindow(1280, 720, "Witch");
+    SetWindowState(FLAG_WINDOW_TOPMOST | FLAG_WINDOW_RESIZABLE);
+    SetWindowFocused();
     SetTargetFPS(60);
     srand((unsigned)time(NULL));
 
@@ -86,15 +92,16 @@ int main(void) {
 
     while (!WindowShouldClose()) {
         for (int i = 0; i < worlds_count; i++) {
-            scene_graph_update(worlds[i]->graph);
+            World* world = worlds[i];
 
-            b2World_Step(worlds[i]->id, time_step, 8);
-            handle_collision_enter_events(worlds[i]);
-            handle_collision_exit_events(worlds[i]);
-            handle_movement_events(worlds[i]);
+            scene_graph_update(world->graph);
+            b2World_Step(world->id, time_step, 8);
+            handle_collision_enter_events(world);
+            handle_collision_exit_events(world);
+            handle_movement_events(world);
 
-            scene_graph_compute_positions(worlds[i]->graph);
-            scene_graph_ysort_parallel(worlds[i]->graph, pool);
+            scene_graph_compute_positions(world->graph);
+            scene_graph_ysort_parallel(world->graph, pool);
         }
 
         BeginDrawing();
