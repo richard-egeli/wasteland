@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "box2d/box2d.h"
-#include "box2d/collision.h"
 #include "box2d/math_functions.h"
 #include "box2d/types.h"
 #include "lauxlib.h"
@@ -12,6 +11,17 @@
 #include "lua/entity.h"
 #include "lua/utils.h"
 #include "lua/world.h"
+#include "scene-graph/scene-graph.h"
+
+static const char* standard_props[] = {
+    "update",
+    "parent",
+    "load",
+    "set_position",
+    "get_position",
+};
+
+static const size_t standard_props_length = sizeof(standard_props) / sizeof(*standard_props);
 
 int static_body_set_position(lua_State* L) {
     assert(lua_gettop(L) == 3 && "Wrong number of arguments (self,x,y)");
@@ -25,6 +35,7 @@ int static_body_set_position(lua_State* L) {
     float y = lua_tonumber(L, 3);
 
     b2Body_SetTransform(entity->static_body.id, (b2Vec2){x, y}, b2Rot_identity);
+    scene_graph_position_set(entity->weak_world_ptr->graph, entity->node, (Position){x, y});
     return 0;
 }
 
@@ -61,32 +72,12 @@ int static_body_create(lua_State* L) {
     body_def.fixedRotation = true;
     b2BodyId body_id       = b2CreateBody(world->id, &body_def);
 
-    b2Polygon box          = b2MakeBox(16, 16);
-    b2ShapeDef shape       = b2DefaultShapeDef();
-    shape.isSensor         = true;
-
-    b2CreatePolygonShape(body_id, &shape, &box);
-
-    Entity* entity = malloc(sizeof(*entity));
+    Entity* entity         = malloc(sizeof(*entity));
     assert(entity != NULL && "Entity cannot be NULL");
 
     entity->static_body.id = body_id;
     entity->type           = ENTITY_TYPE_STATIC_BODY;
     b2Body_SetUserData(body_id, entity);
-
-    lua_getfield(L, 2, "on_collision_enter");
-    if (lua_isfunction(L, -1)) {
-        entity->static_body.on_collision_enter_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        lua_pop(L, 1);
-    }
-
-    lua_getfield(L, 2, "on_collision_exit");
-    if (lua_isfunction(L, -1)) {
-        entity->static_body.on_collision_exit_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        lua_pop(L, 1);
-    }
 
     Entity** entity_ptr = lua_newuserdata(L, sizeof(*entity_ptr));
     assert(entity_ptr != NULL && "Entity pointer cannot be NULL!");
@@ -94,9 +85,9 @@ int static_body_create(lua_State* L) {
     *entity_ptr = entity;
     entity_setup(L, entity, 2);
     entity_setup_update(L, entity, 2);
-    setup_metatable(L, "StaticBody", 2, NULL, 0);
-    lua_pushvalue(L, -1);
+    setup_metatable(L, "StaticBody", 2, standard_props, standard_props_length);
     entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    scene_graph_local_position_set(world->graph, entity->node, (Position){x, y});
 
     return 1;
 }
