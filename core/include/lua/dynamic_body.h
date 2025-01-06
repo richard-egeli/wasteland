@@ -10,8 +10,6 @@ typedef struct lua_State lua_State;
 
 typedef struct DynamicBody {
     b2BodyId id;
-    int on_collision_enter_ref;
-    int on_collision_exit_ref;
 } DynamicBody;
 
 int dynamic_body_create(lua_State* L);

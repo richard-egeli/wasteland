@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "box2d/box2d.h"
+#include "box2d/math_functions.h"
 #include "box2d/types.h"
 #include "lauxlib.h"
 #include "lua.h"
@@ -12,6 +13,17 @@
 #include "lua/utils.h"
 #include "lua/world.h"
 #include "scene-graph/scene-graph.h"
+
+static const char* standard_props[] = {
+    "update",
+    "parent",
+    "load",
+    "set_position",
+    "get_position",
+    "move",
+};
+
+static const size_t standard_props_length = sizeof(standard_props) / sizeof(*standard_props);
 
 int dynamic_body_set_position(lua_State* L) {
     assert(lua_gettop(L) == 3 && "Wrong number of arguments (self,x,y)");
@@ -66,38 +78,28 @@ static void draw_sprite(SceneGraph* graph, Drawable* drawable) {
 int dynamic_body_create(lua_State* L) {
     assert(lua_isuserdata(L, 1));
 
-    World* world           = *(World**)lua_touserdata(L, 1);
-    b2BodyDef body_def     = b2DefaultBodyDef();
+    World* world       = *(World**)lua_touserdata(L, 1);
+    b2BodyDef body_def = b2DefaultBodyDef();
+
+    lua_getfield(L, 2, "x");
+    float x = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "y");
+    float y = lua_tonumber(L, -1);
+    lua_pop(L, 1);
 
     body_def.type          = b2_dynamicBody;
     body_def.fixedRotation = true;
+    body_def.position      = (b2Vec2){x, y};
     b2BodyId body_id       = b2CreateBody(world->id, &body_def);
-    b2Polygon box          = b2MakeBox(16, 16);
-    b2ShapeDef shape       = b2DefaultShapeDef();
-    b2CreatePolygonShape(body_id, &shape, &box);
 
-    Entity* entity = malloc(sizeof(*entity));
+    Entity* entity         = malloc(sizeof(*entity));
     assert(entity != NULL && "entity cannot be NULL!");
 
-    entity->type                                = ENTITY_TYPE_DYNAMIC_BODY;
-    entity->dynamic_body.id                     = body_id;
-    entity->dynamic_body.on_collision_enter_ref = -1;
-    entity->dynamic_body.on_collision_exit_ref  = -1;
+    entity->type            = ENTITY_TYPE_DYNAMIC_BODY;
+    entity->dynamic_body.id = body_id;
     b2Body_SetUserData(body_id, entity);
-
-    lua_getfield(L, 2, "on_collision_enter");
-    if (lua_isfunction(L, -1)) {
-        entity->dynamic_body.on_collision_enter_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        lua_pop(L, 1);
-    }
-
-    lua_getfield(L, 2, "on_collision_exit");
-    if (lua_isfunction(L, -1)) {
-        entity->dynamic_body.on_collision_exit_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        lua_pop(L, 1);
-    }
 
     Entity** entity_ptr = lua_newuserdata(L, sizeof(*entity));
     *entity_ptr         = entity;
@@ -105,8 +107,7 @@ int dynamic_body_create(lua_State* L) {
     entity_setup(L, entity, 2);
     entity_setup_update(L, entity, 2);
 
-    setup_metatable(L, "DynamicBody", 2, NULL, 0);
-    lua_pushvalue(L, -1);
+    setup_metatable(L, "DynamicBody", 2, standard_props, standard_props_length);
     entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
     return 1;
