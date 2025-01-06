@@ -15,7 +15,7 @@ typedef struct World {
     lua_State* L;
 } World;
 
-extern World* worlds[1024];
+extern World* worlds[256];
 extern size_t worlds_count;
 
 void register_world_api(lua_State* L);

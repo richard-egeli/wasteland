@@ -10,13 +10,15 @@
 #include "box2d/types.h"
 #include "lauxlib.h"
 #include "lua.h"
+#include "lua/animator.h"
+#include "lua/box_collider.h"
 #include "lua/dynamic_body.h"
 #include "lua/entity.h"
 #include "lua/sprite.h"
 #include "lua/static_body.h"
 #include "scene-graph/scene-graph.h"
 
-World* worlds[1024] = {0};
+World* worlds[256]  = {0};
 size_t worlds_count = 0;
 
 static int create_world(lua_State* L) {
@@ -76,6 +78,8 @@ static luaL_Reg world_functions[] = {
     {"create_entity", entity_create},
     {"create_dynamic_body", dynamic_body_create},
     {"create_static_body", static_body_create},
+    {"create_box_collider", box_collider_create},
+    {"create_animator", animator_create},
     {"create_sprite", sprite_create},
     {NULL, NULL},
 };
