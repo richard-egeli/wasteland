@@ -38,4 +38,5 @@ void setup_metatable(lua_State* L, const char* name, int idx, const char* filter
     lua_settable(L, -3);
 
     lua_setfenv(L, -2);
+    lua_pushvalue(L, -1);
 }
