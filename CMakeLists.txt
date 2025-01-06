@@ -46,6 +46,8 @@ add_executable(${PROJECT_NAME}
   core/src/lua/dynamic_body.c
   core/src/lua/static_body.c
   core/src/lua/event_handler.c
+  core/src/lua/box_collider.c
+  core/src/lua/animator.c
 )
 
 include(cmake/lua.cmake)
