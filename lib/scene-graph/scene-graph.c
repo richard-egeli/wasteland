@@ -165,7 +165,8 @@ Node scene_graph_node_new(SceneGraph *graph, Node parent) {
 
         Node node       = 0;
         graph->nodes[0] = (SceneNode){
-            .id = node,
+            .id       = node,
+            .userdata = NULL,
         };
 
         scene_graph_index_set(graph, node, 0);
