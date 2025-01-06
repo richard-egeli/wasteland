@@ -3,6 +3,8 @@
 
 typedef struct lua_State lua_State;
 
+typedef struct SpriteSheet SpriteSheet;
+
 typedef struct Sprite {
     int row;
     int col;
@@ -11,11 +13,12 @@ typedef struct Sprite {
     int height;
     float step_x;
     float step_y;
+    SpriteSheet* spritesheet;
 } Sprite;
 
 void sprite_draw(const Sprite* sprite, float x, float y);
 
-Sprite* sprite_parse(lua_State* L, int node, int idx);
+Sprite* sprite_parse(lua_State* L, int node, int idx, Sprite* sprite);
 
 int sprite_create(lua_State* L);
 

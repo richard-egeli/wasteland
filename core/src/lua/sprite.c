@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "assets.h"
 #include "lauxlib.h"
@@ -29,6 +30,7 @@ static int sprite_set_cell(lua_State* L) {
 }
 
 void sprite_draw(const Sprite* sprite, float x, float y) {
+    float ratio   = GetScreenHeight() / 360.f;
     Rectangle src = {
         .x      = sprite->col * sprite->step_x,
         .y      = sprite->row * sprite->step_y,
@@ -36,39 +38,37 @@ void sprite_draw(const Sprite* sprite, float x, float y) {
         .height = sprite->step_y,
     };
 
-    Rectangle dst = {
-        .x      = x,
-        .y      = y,
-        .width  = sprite->step_x,
-        .height = sprite->step_y,
-    };
+    // Scale both position and dimensions
+    float scaled_x       = x * ratio;
+    float scaled_y       = y * ratio;
+    float scaled_width   = sprite->step_x * ratio;
+    float scaled_height  = sprite->step_y * ratio;
 
     float width          = sprite->width;
     float height         = sprite->height;
-    Vector2 top_left     = (Vector2){x, y};
-    Vector2 top_right    = (Vector2){x + dst.width, y};
-    Vector2 bottom_left  = (Vector2){x, y + dst.height};
-    Vector2 bottom_right = (Vector2){x + dst.width, y + dst.height};
+    Vector2 top_left     = (Vector2){scaled_x, scaled_y};
+    Vector2 top_right    = (Vector2){scaled_x + scaled_width, scaled_y};
+    Vector2 bottom_left  = (Vector2){scaled_x, scaled_y + scaled_height};
+    Vector2 bottom_right = (Vector2){scaled_x + scaled_width, scaled_y + scaled_height};
 
     rlSetTexture(sprite->texture_id);
     rlBegin(RL_QUADS);
-
     rlColor4ub(255, 255, 255, 255);
-    rlNormal3f(0.0f, 0.0f, 1.0f);  // Normal vector pointing towards viewer
+    rlNormal3f(0.0f, 0.0f, 1.0f);
 
-    // Top-left corner for texture and quad
+    // Top-left corner
     rlTexCoord2f(src.x / width, src.y / height);
     rlVertex2f(top_left.x, top_left.y);
 
-    // Bottom-left corner for texture and quad
+    // Bottom-left corner
     rlTexCoord2f(src.x / width, (src.y + src.height) / height);
     rlVertex2f(bottom_left.x, bottom_left.y);
 
-    // Bottom-right corner for texture and quad
+    // Bottom-right corner
     rlTexCoord2f((src.x + src.width) / width, (src.y + src.height) / height);
     rlVertex2f(bottom_right.x, bottom_right.y);
 
-    // Top-right corner for texture and quad
+    // Top-right corner
     rlTexCoord2f((src.x + src.width) / width, src.y / height);
     rlVertex2f(top_right.x, top_right.y);
 
@@ -77,12 +77,12 @@ void sprite_draw(const Sprite* sprite, float x, float y) {
 }
 
 static void sprite_draw_ptr(SceneGraph* graph, Drawable* drawable) {
-    Sprite* sprite    = drawable->data;
-    Position position = scene_graph_position_get(graph, drawable->node);
-    sprite_draw(sprite, position.x, position.y);
+    Entity* entity    = drawable->data;
+    Position position = scene_graph_position_get(graph, entity->node);
+    sprite_draw(&entity->sprite, position.x, position.y);
 }
 
-Sprite* sprite_parse(lua_State* L, int node, int idx) {
+Sprite* sprite_parse(lua_State* L, int node, int idx, Sprite* sprite) {
     assert(lua_istable(L, idx) && "Sprite is not a valid table");
     lua_getfield(L, idx, "sprite");
     assert(lua_isnumber(L, -1) && "Sprite not a valid ID");
@@ -92,15 +92,14 @@ Sprite* sprite_parse(lua_State* L, int node, int idx) {
     assert(sheet != NULL && "Sprite sheet cannot be NULL!");
     lua_pop(L, 1);
 
-    Sprite* sprite = malloc(sizeof(*sprite));
-    assert(sprite != NULL && "Sprite cannot be NULL!");
-    sprite->texture_id = sheet->texture.id;
-    sprite->step_x     = (float)sheet->texture.width / sheet->cols;
-    sprite->step_y     = (float)sheet->texture.height / sheet->rows;
-    sprite->width      = sheet->texture.width;
-    sprite->height     = sheet->texture.height;
-    sprite->col        = 0;
-    sprite->row        = 0;
+    sprite->texture_id  = sheet->texture.id;
+    sprite->step_x      = (float)sheet->texture.width / sheet->cols;
+    sprite->step_y      = (float)sheet->texture.height / sheet->rows;
+    sprite->width       = sheet->texture.width;
+    sprite->height      = sheet->texture.height;
+    sprite->spritesheet = sheet;
+    sprite->col         = 0;
+    sprite->row         = 0;
 
     return sprite;
 }
@@ -138,18 +137,20 @@ int sprite_create(lua_State* L) {
     entity_setup(L, entity, 2);
     entity_setup_update(L, entity, 2);
     setup_metatable(L, "Sprite", 2, NULL, 0);
-    lua_pushvalue(L, -1);
 
-    Sprite* sprite = sprite_parse(L, entity->node, 2);
+    sprite_parse(L, entity->node, 2, &entity->sprite);
     Drawable* draw = scene_graph_drawable_new(world->graph, entity->node);
-    scene_graph_position_set(world->graph, entity->node, (Position){x, y});
+    Position p     = scene_graph_position_get(world->graph, entity->node);
+    scene_graph_local_position_set(world->graph, entity->node, (Position){x, y});
 
-    draw->data       = sprite;
-    draw->draw       = sprite_draw_ptr;
-    entity->type     = ENTITY_TYPE_SPRITE;
-    entity->self_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-    sprite->col      = col;
-    sprite->row      = row;
+    draw->data         = entity;
+    draw->draw         = sprite_draw_ptr;
+    entity->type       = ENTITY_TYPE_SPRITE;
+    entity->self_ref   = luaL_ref(L, LUA_REGISTRYINDEX);
+    entity->sprite.col = col;
+    entity->sprite.row = row;
+
+    scene_graph_userdata_set(world->graph, entity->node, entity);
 
     return 1;
 }
