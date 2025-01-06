@@ -33,10 +33,28 @@ world.children.player = world:create_dynamic_body({
 })
 
 world.children.static = world:create_static_body({
-	name = "St John",
 	x = 64,
 	y = 0,
+})
 
+world.children.player.children.collider = world:create_box_collider({
+	parent = world.children.player,
+	y = 3,
+	width = 14,
+	height = 17,
+})
+
+---@class ColliderTest
+---@field name string
+world.children.static.children = world:create_box_collider({
+	parent = world.children.static,
+	name = "St John",
+	y = 3,
+	width = 14,
+	height = 17,
+	trigger = false,
+
+	---@param self ColliderTest
 	on_collision_enter = function(self, other)
 		print("Collision Entered!", self.name, other.health)
 	end,
@@ -46,13 +64,22 @@ world.children.static = world:create_static_body({
 	end,
 })
 
-world.children.player.children = {
-	sprite = world:create_sprite({
-		x = 64,
-		y = 64,
-		parent = world.children.player,
-		sprite = PLAYER_SPRITE,
-		row = 0,
-		col = 0,
-	}),
-}
+world.children.static.children.sprite = world:create_sprite({
+	parent = world.children.static,
+	sprite = PLAYER_SPRITE,
+	row = 0,
+	col = 0,
+})
+
+world.children.player.children.sprite = world:create_sprite({
+	parent = world.children.player,
+	sprite = PLAYER_SPRITE,
+	row = 2,
+	col = 0,
+})
+
+world.children.player.children.animator = world:create_animator({
+	parent = world.children.player.children.sprite,
+})
+
+world.children.player.children.animator:play("idle_down")

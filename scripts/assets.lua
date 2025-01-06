@@ -5,9 +5,15 @@ local human_animations = {
 		loop = false,
 		frames = {
 			{
+				row = 0,
+				column = 1,
+				duration = 0.2,
+				invert = true,
+			},
+			{
 				row = 1,
-				column = 0,
-				duration = 0,
+				column = 1,
+				duration = 0.2,
 				invert = true,
 			},
 		},
@@ -17,8 +23,8 @@ local human_animations = {
 		loop = false,
 		frames = {
 			{
-				column = 1,
 				row = 1,
+				column = 1,
 				duration = 0,
 				invert = false,
 			},
@@ -29,8 +35,8 @@ local human_animations = {
 		loop = false,
 		frames = {
 			{
-				column = 1,
 				row = 2,
+				column = 1,
 				duration = 0,
 				invert = false,
 			},
@@ -41,8 +47,8 @@ local human_animations = {
 		loop = false,
 		frames = {
 			{
-				column = 1,
 				row = 3,
+				column = 1,
 				duration = 0,
 				invert = false,
 			},
