@@ -12,80 +12,68 @@
 
 static int get_collision_enter_ref(Entity* entity) {
     switch (entity->type) {
-        case ENTITY_TYPE_DYNAMIC_BODY:
-            return entity->dynamic_body.on_collision_enter_ref;
-        case ENTITY_TYPE_STATIC_BODY:
-            return entity->static_body.on_collision_enter_ref;
+        case ENTITY_TYPE_BOX_COLLIDER:
+            return entity->box_collider.on_collision_enter_ref;
+        default:
+            break;
     }
 
     assert("Invalid entity type for collision event");
+    return -1;
 }
 
 static int get_collision_exit_ref(Entity* entity) {
     switch (entity->type) {
-        case ENTITY_TYPE_DYNAMIC_BODY:
-            return entity->dynamic_body.on_collision_exit_ref;
-        case ENTITY_TYPE_STATIC_BODY:
-            return entity->static_body.on_collision_exit_ref;
+        case ENTITY_TYPE_BOX_COLLIDER:
+            return entity->box_collider.on_collision_exit_ref;
+        default:
+            break;
     }
 
     assert("Invalid entity type for collision event");
+    return -1;
+}
+
+static void try_sensor_event_func(lua_State* L, int ref, Entity* sensor, Entity* visitor) {
+    if (ref != -1) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+        assert(lua_isfunction(L, -1) && "Not a valid function");
+
+        lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, visitor->self_ref);
+        if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
+            // Handle error
+            printf("Lua error: %s\n", lua_tostring(L, -1));
+            lua_pop(L, 1);  // Remove error message
+        }
+    }
 }
 
 void handle_collision_enter_events(World* world) {
-    lua_State* L          = world->L;
     b2SensorEvents events = b2World_GetSensorEvents(world->id);
 
     for (int i = 0; i < events.beginCount; i++) {
         b2SensorBeginTouchEvent evt = events.beginEvents[i];
-        b2BodyId b1                 = b2Shape_GetBody(evt.sensorShapeId);
-        b2BodyId b2                 = b2Shape_GetBody(evt.visitorShapeId);
-
-        Entity* sensor              = b2Body_GetUserData(b1);
-        Entity* entity              = b2Body_GetUserData(b2);
-
+        b2BodyId body               = b2Shape_GetBody(evt.visitorShapeId);
+        Entity* sensor              = b2Shape_GetUserData(evt.sensorShapeId);
+        Entity* entity              = b2Body_GetUserData(body);
         int ref                     = get_collision_enter_ref(sensor);
-        if (ref != -1) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-            assert(lua_isfunction(L, -1) && "Not a valid function");
 
-            lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
-            if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-                // Handle error
-                printf("Lua error: %s\n", lua_tostring(L, -1));
-                lua_pop(L, 1);  // Remove error message
-            }
-        }
+        try_sensor_event_func(world->L, ref, sensor, entity);
     }
 }
 
 void handle_collision_exit_events(World* world) {
-    lua_State* L          = world->L;
     b2SensorEvents events = b2World_GetSensorEvents(world->id);
-    b2BodyEvents evt      = b2World_GetBodyEvents(world->id);
 
     for (int i = 0; i < events.endCount; i++) {
         b2SensorEndTouchEvent evt = events.endEvents[i];
-        b2BodyId b1               = b2Shape_GetBody(evt.sensorShapeId);
-        b2BodyId b2               = b2Shape_GetBody(evt.visitorShapeId);
-
-        Entity* sensor            = b2Body_GetUserData(b1);
-        Entity* entity            = b2Body_GetUserData(b2);
-
+        b2BodyId body             = b2Shape_GetBody(evt.visitorShapeId);
+        Entity* sensor            = b2Shape_GetUserData(evt.sensorShapeId);
+        Entity* entity            = b2Body_GetUserData(body);
         int ref                   = get_collision_exit_ref(sensor);
-        if (ref != -1) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
-            assert(lua_isfunction(L, -1) && "Not a valid function");
 
-            lua_rawgeti(L, LUA_REGISTRYINDEX, sensor->self_ref);
-            lua_rawgeti(L, LUA_REGISTRYINDEX, entity->self_ref);
-            if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
-                // Handle error
-                printf("Lua error: %s\n", lua_tostring(L, -1));
-                lua_pop(L, 1);  // Remove error message
-            }
-        }
+        try_sensor_event_func(world->L, ref, sensor, entity);
     }
 }
 
