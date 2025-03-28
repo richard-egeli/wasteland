@@ -1,9 +1,12 @@
 [submodule "submodules/vec"]
 	path = submodules/vec
-	url = https://github.com/richard-egeli/vec
+	url = git@github.com/richard-egeli/vec.git
 [submodule "submodules/map"]
 	path = submodules/map
-	url = https://github.com/richard-egeli/map
+	url = git@github.com/richard-egeli/map.git
 [submodule "submodules/mpx"]
 	path = submodules/mpx
 	url = git@github.com:richard-egeli/mpx.git
+[submodule "submodules/str"]
+	path = submodules/str
+	url = git@github.com:richard-egeli/str.git
