@@ -30,6 +30,7 @@ add_subdirectory(lib/ui)
 add_subdirectory(lib/thread-pool)
 add_subdirectory(lib/scene-graph)
 add_subdirectory(lib/thpool)
+add_subdirectory(submodules/mpx)
 
 add_executable(${PROJECT_NAME} 
   core/main.c 
@@ -67,6 +68,7 @@ target_link_libraries(${PROJECT_NAME}
   collision 
   hashmap 
   array 
+  mpx
   ldtk 
   ui
 )
